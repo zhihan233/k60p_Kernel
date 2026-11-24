@@ -11,7 +11,7 @@ ACK_SHA="8a8f52308945f4b0f1a168fa91bd7de0a76e59c4"   # android13-5.15-lts head (
 BASE_VER="5.15.195"
 THEIRS_VER="5.15.226"
 
-WORK="${WORKDIR:-/mnt/probe}"
+WORK="${WORKDIR:-$RUNNER_TEMP/socrates-probe}"
 mkdir -p "$WORK"
 cd "$WORK"
 
@@ -22,7 +22,7 @@ log "0. 下载源码 tarball"
 [[ -s base.tar.xz ]] || curl -fsSL --retry 3 -o base.tar.xz "https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-$BASE_VER.tar.xz"
 [[ -s theirs.tar.xz ]] || curl -fsSL --retry 3 -o theirs.tar.xz "https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-$THEIRS_VER.tar.xz"
 ls -la ack.tar.gz base.tar.xz theirs.tar.xz
-df -h /mnt .
+df -h .
 
 log "1. 构建三提交仓库 (base=5.15.195, ack=ACK lts, theirs=5.15.226)"
 rm -rf repo
