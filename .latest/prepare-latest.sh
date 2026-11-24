@@ -88,7 +88,11 @@ echo "== merge fixups applied (openssl host tools -> upstream 5.15.226 side)"
 cd "$ROOT"
 rm -rf kernel
 mv "$WORK/repo" kernel
-rm -rf kernel/.git
+# git commit 可能触发后台 gc，直接 rm -rf 会偶发 "Directory not empty"，重试几次
+for _i in 1 2 3 4; do
+  rm -rf kernel/.git 2>/dev/null && break
+  sleep 2
+done || true
 cp "$WORK/merge.log" dist/merge-latest.log
 echo "scripts/sign-file.c scripts/extract-cert.c scripts/ssl-common.h (host openssl tools, upstream side)" > dist/merge-fixups-latest.txt
 
