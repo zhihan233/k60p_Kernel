@@ -1,3 +1,16 @@
 out/
+kernel/
+toolchain/
+dist/
+artifacts/
+.cache/
+work/
 research/
-*.log
+patches/bbg/
+patches/droidspaces/
+patches/gaming/
+*.rej
+*.orig
+
+__pycache__/
+*.pyc
