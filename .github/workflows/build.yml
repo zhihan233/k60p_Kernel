@@ -16,13 +16,13 @@ permissions:
 
 concurrency:
   group: build-kernel
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   kernel:
     name: kernel-${{ matrix.variant }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 350
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
@@ -86,11 +86,7 @@ jobs:
         continue-on-error: true
         env:
           VARIANT: ${{ matrix.variant }}
-        run: |
-          set -o pipefail
-          mkdir -p dist
-          bash scripts/build.sh 2>&1 | tee -a "dist/build-${VARIANT:-${{ matrix.variant }}}.shell.log"
-          exit ${PIPESTATUS[0]}
+        run: bash scripts/build.sh
 
       - name: Package Image / boot.img / AnyKernel3
         id: package
@@ -121,6 +117,13 @@ jobs:
             echo "package=${OUTCOME_PACKAGE}"
           } > "dist/ci-artifacts/steps-${VARIANT}.txt"
 
+      - name: Publish this variant immediately
+        if: always()
+        env:
+          VARIANT: ${{ matrix.variant }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/publish-variant.sh
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,24 +132,3 @@ jobs:
           path: dist/
           if-no-files-found: warn
           retention-days: 30
-
-  publish:
-    name: publish
-    needs: kernel
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: dist-*
-          path: dist
-          merge-multiple: true
-
-      - name: Publish to ci-artifacts branch and GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/publish.sh

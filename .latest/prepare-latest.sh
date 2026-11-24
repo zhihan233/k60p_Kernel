@@ -77,19 +77,20 @@ if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
 fi
 git diff --stat ack HEAD | tail -1 > "$ROOT/dist/merge-diffstat-latest.txt"
 
-# 5.15.y stable 与 ACK 都各自 backport 过 OpenSSL 3 兼容代码，三路自动合并后
-# scripts/sign-file.c / extract-cert.c 会出现重复定义（#endif without #if）。
-# 这两个只是构建期 host 工具，不影响内核代码，统一取 ACK 侧版本（已验证可编译）。
-git checkout ack -- scripts/sign-file.c scripts/extract-cert.c 2>/dev/null || true
-git commit -qm "merge fixup: keep ACK versions of openssl host tools" >/dev/null 2>&1 || true
-echo "== merge fixups applied (openssl host tools -> ACK side)"
+# 5.15.225->226 上游把 sign-file/extract-cert 的 OpenSSL 兼容代码重构进
+# scripts/ssl-common.h。ACK 侧这些文件与基线不同，三路合并 -X ours 会产生
+# 半新半旧的混合体（#endif without #if / 函数重定义）。这些只是构建期 host 工具，
+# 不影响内核代码，统一取 upstream(226) 侧版本保证自洽。
+git checkout theirs -- scripts/sign-file.c scripts/extract-cert.c scripts/ssl-common.h 2>/dev/null || true
+git commit -qm "merge fixup: use upstream 5.15.226 openssl host tools" >/dev/null 2>&1 || true
+echo "== merge fixups applied (openssl host tools -> upstream 5.15.226 side)"
 
 cd "$ROOT"
 rm -rf kernel
 mv "$WORK/repo" kernel
 rm -rf kernel/.git
 cp "$WORK/merge.log" dist/merge-latest.log
-echo "scripts/sign-file.c scripts/extract-cert.c (host openssl tools, kept ACK side)" > dist/merge-fixups-latest.txt
+echo "scripts/sign-file.c scripts/extract-cert.c scripts/ssl-common.h (host openssl tools, upstream side)" > dist/merge-fixups-latest.txt
 
 echo "== 2. 应用补丁"
 cd kernel
