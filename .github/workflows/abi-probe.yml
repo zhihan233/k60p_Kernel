@@ -18,36 +18,50 @@ concurrency:
 jobs:
   probe:
     name: probe-${{ matrix.name }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: stock-c21
+            os: ubuntu-24.04
             fragments: ""
             toolchain: c21
             lto: full
           - name: stock-c14
+            os: ubuntu-22.04
             fragments: ""
             toolchain: c14
             lto: thin
           - name: droid-c21
+            os: ubuntu-24.04
             fragments: "config/probe-droidspaces.config"
             toolchain: c21
             lto: full
           - name: droid-c14
+            os: ubuntu-22.04
             fragments: "config/probe-droidspaces.config"
             toolchain: c14
             lto: thin
           - name: full-c14
+            os: ubuntu-22.04
             fragments: "config/features-common.config,config/features-gaming.config"
             toolchain: c14
             lto: thin
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install deps
+      - name: Install deps (24.04)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex libssl-dev libelf-dev dwarves cpio build-essential \
+            patch zip unzip curl git python3 lz4 zstd kmod openssl file
+
+      - name: Install deps (22.04, includes clang-14)
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
@@ -64,3 +78,25 @@ jobs:
         run: |
           set -o pipefail
           bash .probe/probe.sh "$PROBE_NAME" "$PROBE_FRAGMENTS" "$PROBE_TOOLCHAIN" "$PROBE_LTO" 2>&1 | tee "probe-${PROBE_NAME}.log"
+
+      - name: Publish probe result (even on failure)
+        if: always()
+        env:
+          NAME: ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "abi-probe-log-${NAME}" >/dev/null 2>&1 || true
+          git rm -rqf . --ignore-unmatch >/dev/null 2>&1 || true
+          mkdir -p probe log
+          for f in dist/probe-* ; do
+            [[ -e "$f" ]] && cp "$f" probe/ 2>/dev/null || true
+          done
+          for f in "probe-${NAME}.log" ; do
+            [[ -e "$f" ]] && cp "$f" log/ 2>/dev/null || true
+          done
+          git add -Af probe log >/dev/null
+          if git commit -qm "abi probe ${NAME}"; then
+            git push -f origin "HEAD:abi-probe-log-${NAME}"
+          fi
