@@ -81,6 +81,10 @@ apply_dir() {
   local found=0
   for p in "${dir}"/*.patch; do
     [[ -e "$p" ]] || continue
+    # sysvipc kABI 补丁已按自动选槽单独应用，跳过所有备选变体
+    case "$(basename "$p")" in
+      0001-sysvipc-kabi-padding-*) continue ;;
+    esac
     found=1
     echo "== applying $(basename "$p")"
     patch --batch --fuzz=3 -p1 < "$p"
