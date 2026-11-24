@@ -41,6 +41,33 @@ print(f"== kernel source version: {got} (expect {want})")
 assert got == want, (got, want)
 PY
 
+# ---------- 1.5 生成 KMI 导出符号白名单 ----------
+# 原厂 CONFIG_TRIM_UNUSED_KSYMS=y，靠白名单保留所有 KMI 导出符号（否则 vendor 模块
+# 会因 "Unknown symbol" 加载失败）。白名单 = ACK android/abi_gki_aarch64* 全部符号列表，
+# 与 Google GKI 构建使用的 KMI 符号集合一致。
+python3 - <<'PY'
+from pathlib import Path
+kd = Path('kernel')
+files = []
+for p in sorted((kd / 'android').glob('abi_gki_aarch64*')):
+    if p.suffix in ('.xml', '.stg', '.raw') or p.name.endswith('.allowed_breaks'):
+        continue
+    files.append(p)
+syms = set()
+for p in files:
+    for line in p.read_text(errors='replace').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('['):
+            continue
+        if ' ' in line:
+            continue
+        syms.add(line)
+assert len(syms) > 5000, f"KMI whitelist too small: {len(syms)}"
+out = kd / 'kmi_whitelist.txt'
+out.write_text('\n'.join(sorted(syms)) + '\n')
+print(f"== KMI whitelist: {len(syms)} symbols from {len(files)} files -> {out}")
+PY
+
 # ---------- 2. toolchain ----------
 if [[ ! -x "toolchain/${T_DIR}/bin/clang" ]]; then
   echo "== fetching toolchain: ${T_DIR}"

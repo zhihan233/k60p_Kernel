@@ -96,6 +96,29 @@ done || true
 cp "$WORK/merge.log" dist/merge-latest.log
 echo "scripts/sign-file.c scripts/extract-cert.c scripts/ssl-common.h (host openssl tools, upstream side)" > dist/merge-fixups-latest.txt
 
+echo "== 1.5 生成 KMI 导出符号白名单"
+python3 - <<'PY'
+from pathlib import Path
+kd = Path('kernel')
+files = []
+for p in sorted((kd / 'android').glob('abi_gki_aarch64*')):
+    if p.suffix in ('.xml', '.stg', '.raw') or p.name.endswith('.allowed_breaks'):
+        continue
+    files.append(p)
+syms = set()
+for p in files:
+    for line in p.read_text(errors='replace').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('['):
+            continue
+        if ' ' in line:
+            continue
+        syms.add(line)
+assert len(syms) > 5000, len(syms)
+(kd / 'kmi_whitelist.txt').write_text('\n'.join(sorted(syms)) + '\n')
+print(f"== KMI whitelist: {len(syms)} symbols")
+PY
+
 echo "== 2. 应用补丁"
 cd kernel
 apply_one() {

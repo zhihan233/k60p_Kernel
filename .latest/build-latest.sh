@@ -47,8 +47,10 @@ apply_cfg() {
 }
 apply_cfg config/features-common.config
 apply_cfg config/features-gaming.config
-kernel/scripts/config --file out/.config --disable UNUSED_KSYMS_WHITELIST
-kernel/scripts/config --file out/.config --disable TRIM_UNUSED_KSYMS
+WHITELIST="$ROOT/kernel/kmi_whitelist.txt"
+[[ -s "$WHITELIST" ]] || { echo "!! KMI whitelist missing"; exit 1; }
+kernel/scripts/config --file out/.config --enable TRIM_UNUSED_KSYMS
+kernel/scripts/config --file out/.config --set-str UNUSED_KSYMS_WHITELIST "$WHITELIST"
 
 make -C kernel O="$ROOT/out" olddefconfig
 kernel/scripts/diffconfig config/device-baseline.config out/.config > "dist/config-${VARIANT}.diff" || true
@@ -80,7 +82,7 @@ for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPF
              'CONFIG_MACVLAN', 'CONFIG_IP6_NF_NAT', 'CONFIG_IP6_NF_TARGET_MASQUERADE'):
     assert actual.get(name) == 'y', (name, actual.get(name))
 assert actual.get('CONFIG_BBG') == 'y'
-assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') != 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
+assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') == 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
 assert 'baseband_guard' in actual.get('CONFIG_LSM', '')
 assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
 assert actual.get('CONFIG_TCP_CONG_BBR3') == 'y'

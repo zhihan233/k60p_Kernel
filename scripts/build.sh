@@ -80,13 +80,17 @@ apply_cfg config/features-common.config
 if [[ "${VARIANT}" == "gaming" ]]; then
   apply_cfg config/features-gaming.config
 fi
-# 原厂配置指向小米构建机绝对路径，构建前必须清空
-kernel/scripts/config --file out/.config --disable UNUSED_KSYMS_WHITELIST
-# 关键：原厂 CONFIG_TRIM_UNUSED_KSYMS=y + 白名单指向小米构建机路径。
-# 若直接构建（白名单为空），modpost 会把几乎所有 EXPORT_SYMBOL 裁掉，
-# 导致 400 个原厂 vendor 模块因 "Unknown symbol" 无法加载 → bootloop。
-# 这里关闭裁剪（与原厂社区内核做法一致），保留全部导出符号。
-kernel/scripts/config --file out/.config --disable TRIM_UNUSED_KSYMS
+# 原厂配置 CONFIG_TRIM_UNUSED_KSYMS=y，但白名单指向小米构建机的绝对路径。
+# 这里改成指向 prepare.sh 生成的 KMI 白名单（ACK android/abi_gki_aarch64* 全量符号），
+# 既保持与原厂/Google GKI 构建一致的符号裁剪方式，又保证 400 个原厂 vendor 模块
+# 需要的导出符号全部保留（否则会因 "Unknown symbol" 加载失败 → bootloop）。
+WHITELIST="$ROOT/kernel/kmi_whitelist.txt"
+if [[ ! -s "$WHITELIST" ]]; then
+  echo "!! KMI whitelist missing: $WHITELIST"
+  exit 1
+fi
+kernel/scripts/config --file out/.config --enable TRIM_UNUSED_KSYMS
+kernel/scripts/config --file out/.config --set-str UNUSED_KSYMS_WHITELIST "$WHITELIST"
 
 make -C kernel O="$ROOT/out" olddefconfig
 
@@ -129,10 +133,9 @@ for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPF
 # BBG
 assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
 assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
-# 构建修正
-assert actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', '') in ('', 'n', '""'), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
-# 关闭符号裁剪，否则原厂 vendor 模块会全部加载失败
-assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') != 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
+# 构建修正：保持原厂 TRIM=y，白名单指向生成的 KMI 符号表
+assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') == 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
+assert 'kmi_whitelist.txt' in actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', ''), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
 # 游戏优化
 assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
 assert actual.get('CONFIG_DEFAULT_FQ_CODEL') == 'y'
