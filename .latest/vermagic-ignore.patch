@@ -1,0 +1,13 @@
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -3321,9 +3321,9 @@
+ 	if (!modmagic) {
+ 		err = try_to_force_load(mod, "bad vermagic");
+ 		if (err)
+ 			return err;
+-	} else if (!same_magic(modmagic, vermagic, info->index.vers)) {
++	} else if (!same_magic(modmagic, vermagic, true)) {
+ 		pr_err("%s: version magic '%s' should be '%s'\n",
+ 		       info->name, modmagic, vermagic);
+ 		return -ENOEXEC;
+ 	}
