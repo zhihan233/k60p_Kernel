@@ -125,7 +125,7 @@ for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPF
 assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
 assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
 # 构建修正
-assert actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', '') in ('', 'n'), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
+assert actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', '') in ('', 'n', '""'), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
 # 游戏优化
 assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
 assert actual.get('CONFIG_DEFAULT_FQ_CODEL') == 'y'

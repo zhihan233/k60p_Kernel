@@ -32,7 +32,7 @@ mkdir -p ci-artifacts
 find dist -maxdepth 2 -type f \( \
     -name '*.json' -o -name '*.txt' -o -name '*.diff' -o -name '*.config' \
     -o -name '*.md' -o -name '*.h' -o -name '*.sha256' -o -name 'SHA256SUMS-*' \
-    -o -name '*.gz' \) -exec cp {} ci-artifacts/ \; 2>/dev/null || true
+    -o -name '*.gz' -o -name '*.log' \) -exec cp {} ci-artifacts/ \; 2>/dev/null || true
 echo "ci-artifacts branch content:"
 ls -la ci-artifacts/ || true
 git add -Af ci-artifacts >/dev/null

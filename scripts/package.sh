@@ -58,6 +58,9 @@ cp dist/compiler.txt "dist/ci-artifacts/" 2>/dev/null || true
 cp dist/kernel-source.sha256 "dist/ci-artifacts/" 2>/dev/null || true
 cp dist/source.patch "dist/ci-artifacts/" 2>/dev/null || true
 cp dist/sources.lock.json "dist/ci-artifacts/" 2>/dev/null || true
+for lf in dist/*.log; do
+  [[ -e "$lf" ]] && cp "$lf" "dist/ci-artifacts/" 2>/dev/null || true
+done
 if [[ -f dist/build.log ]]; then
   # 只保留错误摘要 + 尾部，避免分支过大
   {
