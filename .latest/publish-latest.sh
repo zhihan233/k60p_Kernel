@@ -35,6 +35,7 @@ if git commit -qm "latest artifacts: run ${GITHUB_RUN_ID:-local}" >/dev/null 2>&
 fi
 
 if command -v gh >/dev/null 2>&1; then
+  set +e
   TAG="k60p-kernel-5.15.226"
   NOTES=dist/CI-SUMMARY.md
   cat dist/RELEASE-latest.md >> "$NOTES" 2>/dev/null || true
@@ -47,5 +48,6 @@ if command -v gh >/dev/null 2>&1; then
     gh release upload "$TAG" "${assets[@]}" --clobber
   fi
   gh release edit "$TAG" --notes-file "$NOTES" >/dev/null 2>&1 || true
+  set -e
 fi
 echo "== latest publish done"

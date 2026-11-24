@@ -113,7 +113,7 @@ fi
 "toolchain/$T_DIR/bin/clang" --version | tee dist/compiler.txt
 python3 - <<PY
 import json, urllib.request
-url = "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+9916fb51ccb914d62d35ad9a7b9b21d2ef046928/$T_DIR/?format=JSON"
+url = "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/9916fb51ccb914d62d35ad9a7b9b21d2ef046928/$T_DIR/?format=JSON"
 with urllib.request.urlopen(url, timeout=60) as r:
     tree = json.loads(r.read()[4:])["id"]
 assert tree == "$T_TREE", (tree, "$T_TREE")
