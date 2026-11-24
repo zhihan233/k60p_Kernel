@@ -3,15 +3,15 @@
   "device_name": "Redmi K60 Pro",
   "rom": "HyperOS 3.0.304.0.WMKCNXM / Android 16",
   "kernel": {
-    "url": "https://github.com/aosp-mirror/kernel_common.git",
+    "url": "https://android.googlesource.com/kernel/common",
     "tag": "android13-5.15.194_r00",
-    "commit": "bce84c40a40be5a627fa563399c00689829c705a",
+    "commit": "f4321180a3973d19b626b3eef51871199e4e1fac",
     "release": "5.15.194-android13-8-00019-gf4321180a397-ab15212794",
     "localversion": "-android13-8",
     "scmversion": "-00019-gf4321180a397",
     "build_number": "15212794",
-    "archive_url": "https://codeload.github.com/aosp-mirror/kernel_common/tar.gz/bce84c40a40be5a627fa563399c00689829c705a",
-    "note": "这是设备原厂 GKI 内核 (5.15.194-android13-8-00019-gf4321180a397-ab15212794) 对应的 Android Common Kernel 官方发布 tag。vermagic 通过 localversion/scmversion/build_number 精确复现，保证原厂 vendor_dlkm 模块与 init_boot 中 KernelSU/SukiSU LKM 可正常加载。"
+    "archive_url": "https://android.googlesource.com/kernel/common/+archive/f4321180a3973d19b626b3eef51871199e4e1fac.tar.gz",
+    "note": "精确的原厂内核源码：设备原厂 boot.img 内核 banner 为 5.15.194-android13-8-00019-gf4321180a397-ab15212794，说明 Google 是从 kernel/common 的 f4321180a397 提交构建的（比 android13-5.15.194_r00 tag 多约 19 个 backport 提交，包含 PM runtime 等修复）。用这个精确提交构建才能让 genksyms CRC 与原厂 vendor 模块完全一致。vermagic 通过 localversion/scmversion/build_number 精确复现。"
   },
   "toolchain": {
     "url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86",
@@ -26,7 +26,7 @@
     "patch": "Documentation/resources/kernel-patches/GKI/below-kernel-6.12/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch"
   },
   "bbg": {
-    "url": "https://github.com/vc-teahouse/Baseband-guard",
+    "url": "https://vc-teahouse/Baseband-guard",
     "commit": "48d9fdea643bcb41d204541400e9d8656b97a54f"
   },
   "anykernel3": {

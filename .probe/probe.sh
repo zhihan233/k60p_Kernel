@@ -7,7 +7,8 @@ cd "$ROOT"
 NAME="$1"; FRAGMENTS="$2"; TOOLCHAIN="$3"; LTO="${4:-full}"
 mkdir -p dist probe-work
 
-ACK_SHA="8a8f52308945f4b0f1a168fa91bd7de0a76e59c4"
+STOCK_COMMIT="f4321180a3973d19b626b3eef51871199e4e1fac"
+KERNEL_URL="https://android.googlesource.com/kernel/common/+archive/$STOCK_COMMIT.tar.gz"
 if [[ "$TOOLCHAIN" == "c21" ]]; then
   T_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/9916fb51ccb914d62d35ad9a7b9b21d2ef046928/clang-r563880c.tar.gz"
   T_DIR="clang-r563880c"
@@ -21,9 +22,9 @@ df -h .
 # ---------- 1. kernel source ----------
 if [[ ! -f kernel/Makefile ]]; then
   echo "== download kernel source"
-  curl -fsSL --retry 3 -o .cache-kernel.tar.gz "https://codeload.github.com/aosp-mirror/kernel_common/tar.gz/$ACK_SHA"
+  curl -fsSL --retry 3 -o .cache-kernel.tar.gz "$KERNEL_URL"
   mkdir -p kernel
-  tar -xzf .cache-kernel.tar.gz --strip-components=1 -C kernel
+  tar -xzf .cache-kernel.tar.gz -C kernel
   rm -f .cache-kernel.tar.gz
 fi
 
@@ -111,6 +112,9 @@ for f in "${FRAG_ARR[@]}"; do
   echo "== fragment $f"
   apply_cfg "$f"
 done
+# BBG 默认 CONFIG_BBG=y（Kconfig default），必须在 CONFIG_LSM 里加入 baseband_guard，
+# 否则 security/baseband-guard/Makefile 会 $(error) 终止构建。
+kernel/scripts/config --file out/.config --set-str LSM "landlock,lockdown,yama,loadpin,safesetid,integrity,selinux,baseband_guard,smack,tomoyo,apparmor,bpf"
 kernel/scripts/config --file out/.config --enable TRIM_UNUSED_KSYMS
 kernel/scripts/config --file out/.config --set-str UNUSED_KSYMS_WHITELIST "$ROOT/kernel/kmi_whitelist.txt"
 if [[ "$LTO" == "thin" ]]; then

@@ -24,33 +24,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: stock-c21
+          - name: f432-stock-c21
             os: ubuntu-24.04
             fragments: ""
             toolchain: c21
             lto: full
-          - name: stock-c14
-            os: ubuntu-22.04
-            fragments: ""
-            toolchain: c14
-            lto: thin
-          - name: droid-c21
+          - name: f432-droid-c21
             os: ubuntu-24.04
             fragments: "config/probe-droidspaces.config"
             toolchain: c21
             lto: full
-          - name: droid-c14
-            os: ubuntu-22.04
-            fragments: "config/probe-droidspaces.config"
-            toolchain: c14
-            lto: thin
-          - name: full-c14
+          - name: f432-full-c21
+            os: ubuntu-24.04
+            fragments: "config/features-common.config,config/features-gaming.config"
+            toolchain: c21
+            lto: full
+          - name: f432-full-c14
             os: ubuntu-22.04
             fragments: "config/features-common.config,config/features-gaming.config"
             toolchain: c14
             lto: thin
     steps:
       - uses: actions/checkout@v4
+
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift || true
+          df -h /
 
       - name: Install deps (24.04)
         if: matrix.os == 'ubuntu-24.04'
@@ -59,6 +60,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             bc bison flex libssl-dev libelf-dev dwarves cpio build-essential \
             patch zip unzip curl git python3 lz4 zstd kmod openssl file
+          df -h /
 
       - name: Install deps (22.04, includes clang-14)
         if: matrix.os == 'ubuntu-22.04'
@@ -68,8 +70,10 @@ jobs:
             bc bison flex libssl-dev libelf-dev dwarves cpio build-essential \
             patch zip unzip curl git python3 lz4 zstd kmod openssl file \
             clang-14 lld-14 llvm-14
+          df -h /
 
       - name: Run ABI probe
+        id: probe
         env:
           PROBE_NAME: ${{ matrix.name }}
           PROBE_FRAGMENTS: ${{ matrix.fragments }}
@@ -83,19 +87,29 @@ jobs:
         if: always()
         env:
           NAME: ${{ matrix.name }}
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan "abi-probe-log-${NAME}" >/dev/null 2>&1 || true
-          git rm -rqf . --ignore-unmatch >/dev/null 2>&1 || true
           mkdir -p probe log
+          {
+            echo "name=${NAME}"
+            echo "probe_outcome=${PROBE_OUTCOME}"
+            echo "os=${{ matrix.os }}"
+            echo "fragments=${{ matrix.fragments }}"
+            echo "toolchain=${{ matrix.toolchain }}"
+            echo "lto=${{ matrix.lto }}"
+          } > log/summary.txt
+          df -h >> log/summary.txt || true
           for f in dist/probe-* ; do
             [[ -e "$f" ]] && cp "$f" probe/ 2>/dev/null || true
           done
           for f in "probe-${NAME}.log" ; do
             [[ -e "$f" ]] && cp "$f" log/ 2>/dev/null || true
           done
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "abi-probe-log-${NAME}" >/dev/null 2>&1 || true
+          git rm -rqf . --ignore-unmatch >/dev/null 2>&1 || true
           git add -Af probe log >/dev/null
           if git commit -qm "abi probe ${NAME}"; then
             git push -f origin "HEAD:abi-probe-log-${NAME}"

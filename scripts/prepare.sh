@@ -25,7 +25,9 @@ if [[ ! -f kernel/Makefile ]]; then
   curl -fL --retry 3 "${K_URL}" -o .cache/kernel-source.tar.gz
   sha256sum .cache/kernel-source.tar.gz | tee dist/kernel-source.sha256
   mkdir -p kernel
-  tar -xzf .cache/kernel-source.tar.gz --strip-components=1 -C kernel
+  # Gitiles +archive/<commit>.tar.gz 是「仓库树根」直接打包（没有顶层目录），
+  # 不能使用 --strip-components=1，否则顶层文件（Makefile 等）会被丢掉。
+  tar -xzf .cache/kernel-source.tar.gz -C kernel
   rm -f .cache/kernel-source.tar.gz
 fi
 
