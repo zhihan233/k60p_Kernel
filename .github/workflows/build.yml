@@ -32,10 +32,14 @@ jobs:
 
       - name: Prepare runner (free disk + build deps)
         id: runner
-        run: bash scripts/prepare-runner.sh
+        run: |
+          set -o pipefail
+          mkdir -p dist
+          bash scripts/prepare-runner.sh 2>&1 | tee "dist/prepare-runner-${{ matrix.variant }}.log"
 
       - name: Restore compiler cache
         id: cache
+        continue-on-error: true
         uses: actions/cache/restore@v4
         with:
           path: toolchain/clang-r563880c
@@ -100,6 +104,7 @@ jobs:
         env:
           VARIANT: ${{ matrix.variant }}
           OUTCOME_RUNNER: ${{ steps.runner.outcome }}
+          OUTCOME_CACHE: ${{ steps.cache.outcome }}
           OUTCOME_PREPARE: ${{ steps.prepare.outcome }}
           OUTCOME_SWAP: ${{ steps.swap.outcome }}
           OUTCOME_BUILD: ${{ steps.build.outcome }}
@@ -109,6 +114,7 @@ jobs:
           {
             echo "variant=${VARIANT}"
             echo "runner=${OUTCOME_RUNNER}"
+            echo "cache=${OUTCOME_CACHE}"
             echo "prepare=${OUTCOME_PREPARE}"
             echo "swap=${OUTCOME_SWAP}"
             echo "build=${OUTCOME_BUILD}"

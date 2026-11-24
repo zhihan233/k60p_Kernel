@@ -7,6 +7,19 @@ ROOT="$PWD"
 VARIANT="${VARIANT:-standard}"
 mkdir -p dist dist/ci-artifacts
 
+collect_logs() {
+  mkdir -p dist/ci-artifacts
+  for lf in dist/*.log; do
+    [[ -e "$lf" ]] && cp "$lf" "dist/ci-artifacts/" 2>/dev/null || true
+  done
+  for extra in "dist/config-${VARIANT}.diff" "dist/kernel-${VARIANT}.config" \
+               "dist/utsrelease-${VARIANT}.h" "dist/compiler.txt" \
+               "dist/kernel-source.sha256" "dist/source.patch" "dist/sources.lock.json"; do
+    [[ -e "$extra" ]] && cp "$extra" "dist/ci-artifacts/" 2>/dev/null || true
+  done
+}
+collect_logs
+
 if [[ ! -f "dist/Image-${VARIANT}" ]]; then
   echo "!! no kernel Image built for variant ${VARIANT}, skip packaging"
   echo "NO_IMAGE" > "dist/ci-artifacts/status-${VARIANT}.txt"

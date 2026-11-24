@@ -1,32 +1,34 @@
 #!/usr/bin/env bash
+# GitHub Actions ubuntu-24.04 runner 准备：清理无用预装目录、安装内核构建依赖。
 set -euo pipefail
-test "${GITHUB_ACTIONS:-}" = true
+echo "== runner: ${ImageOS:-unknown} / $(uname -a)"
+df -h /
+free -h
 
-sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-  /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/local/share/powershell /usr/share/swift
+# 清理 runner 上体积大且与本次构建无关的预装组件，腾出磁盘供 Full LTO 使用
+for d in /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+         /usr/local/.ghcup /usr/local/share/powershell /usr/share/swift; do
+  if [ -e "$d" ]; then
+    echo "== removing $d"
+    sudo rm -rf "$d" || true
+  fi
+done
 
-# The Azure mirror delivered cross-GCC packages at only tens of KB/s during
-# run 4. Use Ubuntu's own HTTPS archive, and install just the LLVM build needs.
-sudo tee /etc/apt/sources.list.d/ubuntu.sources >/dev/null <<'EOF'
-Types: deb
-URIs: https://archive.ubuntu.com/ubuntu
-Suites: noble noble-updates noble-backports
-Components: main restricted universe multiverse
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+echo "== disk after cleanup"
+df -h /
 
-Types: deb
-URIs: https://security.ubuntu.com/ubuntu
-Suites: noble-security
-Components: main restricted universe multiverse
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-EOF
-
-APT_OPTIONS=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
-sudo apt-get "${APT_OPTIONS[@]}" update -qq
+sudo apt-get update -qq -o Acquire::Retries=3 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60
 sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
-  apt-get "${APT_OPTIONS[@]}" install -y --no-install-recommends --no-upgrade \
-  bc bison flex libssl-dev libelf-dev dwarves cpio build-essential patch openssl file \\
-  zip unzip curl git python3 lz4 zstd kmod
+  apt-get install -y --no-install-recommends \
+  bc bison flex libssl-dev libelf-dev dwarves cpio build-essential patch \
+  zip unzip curl git python3 lz4 zstd kmod openssl file pkg-config
 sudo apt-get clean
-df -h
+
+echo "== installed tools"
+for t in clang gcc make bison flex pahole openssl zip; do
+  command -v "$t" >/dev/null 2>&1 && echo "  $t: $(command -v "$t")" || echo "  $t: MISSING"
+done
+
+echo "== final disk"
+df -h /
 free -h
