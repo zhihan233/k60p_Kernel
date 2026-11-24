@@ -1,0 +1,66 @@
+name: abi-probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.probe/**'
+      - '.github/workflows/abi-probe.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: abi-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: probe-${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: stock-c21
+            fragments: ""
+            toolchain: c21
+            lto: full
+          - name: stock-c14
+            fragments: ""
+            toolchain: c14
+            lto: thin
+          - name: droid-c21
+            fragments: "config/probe-droidspaces.config"
+            toolchain: c21
+            lto: full
+          - name: droid-c14
+            fragments: "config/probe-droidspaces.config"
+            toolchain: c14
+            lto: thin
+          - name: full-c14
+            fragments: "config/features-common.config,config/features-gaming.config"
+            toolchain: c14
+            lto: thin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex libssl-dev libelf-dev dwarves cpio build-essential \
+            patch zip unzip curl git python3 lz4 zstd kmod openssl file \
+            clang-14 lld-14 llvm-14
+
+      - name: Run ABI probe
+        env:
+          PROBE_NAME: ${{ matrix.name }}
+          PROBE_FRAGMENTS: ${{ matrix.fragments }}
+          PROBE_TOOLCHAIN: ${{ matrix.toolchain }}
+          PROBE_LTO: ${{ matrix.lto }}
+        run: |
+          set -o pipefail
+          bash .probe/probe.sh "$PROBE_NAME" "$PROBE_FRAGMENTS" "$PROBE_TOOLCHAIN" "$PROBE_LTO" 2>&1 | tee "probe-${PROBE_NAME}.log"
