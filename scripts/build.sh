@@ -82,6 +82,11 @@ if [[ "${VARIANT}" == "gaming" ]]; then
 fi
 # 原厂配置指向小米构建机绝对路径，构建前必须清空
 kernel/scripts/config --file out/.config --disable UNUSED_KSYMS_WHITELIST
+# 关键：原厂 CONFIG_TRIM_UNUSED_KSYMS=y + 白名单指向小米构建机路径。
+# 若直接构建（白名单为空），modpost 会把几乎所有 EXPORT_SYMBOL 裁掉，
+# 导致 400 个原厂 vendor 模块因 "Unknown symbol" 无法加载 → bootloop。
+# 这里关闭裁剪（与原厂社区内核做法一致），保留全部导出符号。
+kernel/scripts/config --file out/.config --disable TRIM_UNUSED_KSYMS
 
 make -C kernel O="$ROOT/out" olddefconfig
 
@@ -126,6 +131,8 @@ assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
 assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
 # 构建修正
 assert actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', '') in ('', 'n', '""'), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
+# 关闭符号裁剪，否则原厂 vendor 模块会全部加载失败
+assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') != 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
 # 游戏优化
 assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
 assert actual.get('CONFIG_DEFAULT_FQ_CODEL') == 'y'

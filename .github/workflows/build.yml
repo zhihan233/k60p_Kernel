@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-kernel
+  group: build-kernel-v2
   cancel-in-progress: true
 
 jobs:

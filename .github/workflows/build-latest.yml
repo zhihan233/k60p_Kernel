@@ -12,8 +12,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-latest-515
-  cancel-in-progress: false
+  group: build-latest-515-v2
+  cancel-in-progress: true
 
 jobs:
   latest:

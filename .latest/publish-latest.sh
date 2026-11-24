@@ -36,7 +36,7 @@ fi
 
 if command -v gh >/dev/null 2>&1; then
   set +e
-  TAG="k60p-kernel-5.15.226"
+  TAG="k60p-kernel-5.15.226-v2"
   NOTES=dist/CI-SUMMARY.md
   cat dist/RELEASE-latest.md >> "$NOTES" 2>/dev/null || true
   if ! gh release view "$TAG" >/dev/null 2>&1; then
