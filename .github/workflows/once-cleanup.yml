@@ -1,0 +1,39 @@
+name: once-cleanup
+
+# 一次性清理：删除旧 release/tag 和构建产生的临时分支（保留 main 和 k60p-kernel-v3）。
+# 运行成功后本文件会从仓库删除。
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'once/**'
+      - '.github/workflows/once-cleanup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Delete stale releases and branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -x
+          echo "== releases before =="
+          gh release list || true
+          for tag in k60p-kernel-latest k60p-kernel-5.15.226 k60p-kernel-5.15.226-v2 k60p-kernel-v2; do
+            gh release delete "$tag" -y --cleanup-tag || true
+          done
+          echo "== branches before =="
+          gh api "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' || true
+          gh api "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' | while read -r b; do
+            [ -z "$b" ] && continue
+            [ "$b" = "main" ] && continue
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${b}" || true
+          done
+          echo "== after =="
+          gh release list || true
+          gh api "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[].name' || true

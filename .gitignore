@@ -14,3 +14,8 @@ patches/gaming/
 
 __pycache__/
 *.pyc
+deliver/
+deliver-v3/
+*.tar.gz
+.cache-kernel.tar.gz
+.cache-clang.tar.gz
