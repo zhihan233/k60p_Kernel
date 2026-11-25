@@ -1,7 +1,7 @@
 # K60 Pro (socrates) 定制内核 — 构建说明（最终版）
 
 设备：Redmi K60 Pro / socrates / SM8550 (kalama) / HyperOS 3.0.304.0.WMKCNXM (Android 16)
-成品：Release `k60p-kernel-v3`（boot-gaming.img / boot-standard.img / ak3-*.zip）
+成品：Release `k60p-kernel-v4`（boot-gaming.img / boot-standard.img / ak3-*.zip）
 最终构建：GitHub Actions run `45591220514`，commit `8e7a7cc`
 
 ## 1. 源码与版本串
@@ -30,13 +30,18 @@
   "hosted runner lost communication"）；ThinLTO 与 CFI/KMI 兼容，不影响 genksyms CRC /
   vermagic / 模块加载。
 
-## 3. 模块 CRC 兼容处理（关键）
+## 3. 模块 CRC / vermagic 告警（兼容模式，关键）
 
 自编译内核与原厂预编译 vendor 模块存在约 350 个导出符号的 genksyms CRC 数值差异
 （**符号无缺失**，已用 tag194/f432 × clang14/21 四组实验确认是构建环境差异）。
-`patches/common/0025-module-ignore-crc.patch` 让 `kernel/module.c:check_version()`
-跳过 CRC 数值比对，从而原厂 400+ 模块 + init_boot 里的 KernelSU/SukiSU 都能加载。
-注意：`return 1;` 必须放在函数声明之后（否则 `-Wdeclaration-after-statement` Werror 构建失败）。
+`patches/common/0025-module-abi-alarm.patch` 在 `kernel/module.c` 中做两件事：
+
+1. `check_version()`：发现 CRC 不一致时打印 `symbol <name> CRC mismatch: module 0x.. kernel 0x..`
+   告警（每模块最多 16 条，之后 `more CRC mismatches suppressed`），**默认继续加载**
+   （`MODULE_CRC_MISMATCH_IS_FATAL 0`）；改成 1 即恢复严格 GKI 行为（不一致模块拒绝加载）。
+2. `check_modinfo()`：模块 vermagic 的 release 部分与内核不同（带 CRC 模块默认容忍）时也打印告警。
+
+注意：新增代码必须放在函数变量声明之后（否则 `-Wdeclaration-after-statement` Werror 构建失败）。
 
 ## 4. 云端重建流程
 
@@ -45,7 +50,7 @@ push 到 `main` 且改动命中 `.github/workflows/build.yml` 的 paths（`confi
 prepare-runner → 恢复/保存 clang cache → prepare（下载源码/工具链、打补丁、生成 KMI 白名单）→
 分配 swap → build.sh（配置自检、make Image+modules、vermagic 断言、CRC 报告）→
 package.sh（boot.img header v4 + AK3 zip + RELEASE 说明）→ publish-variant.sh（发 Release
-`k60p-kernel-v3`，`--clobber`）→ artifacts 分支存档。
+`k60p-kernel-v4`，`--clobber`）→ artifacts 分支存档。
 
 ## 5. 产物校验要点
 

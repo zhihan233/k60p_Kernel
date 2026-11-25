@@ -40,7 +40,7 @@ fi
 
 # 2) 可下载产物上传到 Release
 if [[ -f "dist/Image-${VARIANT}" ]] && command -v gh >/dev/null 2>&1; then
-  TAG="k60p-kernel-v3"
+  TAG="k60p-kernel-v4"
   NOTES="dist/RELEASE-${VARIANT}.md"
   [[ -f "$NOTES" ]] || echo "# K60 Pro kernel build" > "$NOTES"
   if ! gh release view "$TAG" >/dev/null 2>&1; then

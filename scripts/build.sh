@@ -214,7 +214,7 @@ info = {
     'features': {
         'droidspaces': 'SYSVIPC/POSIX_MQUEUE/IPC_NS/PID_NS/USER_NS/DEVTMPFS/NAT/MACVLAN + kABI padding',
         'bbg': 'Baseband-guard 防格机 LSM (boot/recovery 保护关闭)',
-        'gaming': 'BBRv3 + fq_codel + MGLRU default + sched/io tweaks' if variant == 'gaming' else 'BBR/fq_codel + MGLRU default',
+        'gaming': 'BBRv3 + fq_codel + MGLRU default + sched/io tweaks + CRC/vermagic alarm' if variant == 'gaming' else 'BBR/fq_codel + MGLRU default + CRC/vermagic alarm',
     },
     'vendor_module_crc_check': 'PASS' if crc_rc == 0 else 'FAIL',
     'hashes': sha,

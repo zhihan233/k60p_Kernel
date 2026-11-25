@@ -50,7 +50,7 @@
 | BBG 防格机（Baseband-guard LSM） | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) @ `48d9fdea643bcb41d204541400e9d8656b97a54f` |
 | BBRv3 拥塞控制 | Google BBRv3（2023 版）Android 13-5.15 kABI 适配 backport |
 | 调度/内存/定时器小优化（sched 扫描顺序、dcache 减压、int_sqrt、clear_page、alarmtimer） | 社区常见 5.15 内核优化补丁（已逐个核对 kABI 安全） |
-| 模块 CRC 跳过（兼容原厂预编译 vendor 模块） | 本仓库自写补丁 `patches/common/0025-module-ignore-crc.patch` |
+| 模块 CRC / vermagic 告警（兼容原厂预编译 vendor 模块） | 本仓库自写补丁 `patches/common/0025-module-abi-alarm.patch` |
 
 ### 4. 打包工具
 | 项目 | 来源 |
@@ -70,7 +70,7 @@
 
 ## 获取成品 / 刷入
 
-- **Release 下载**：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-v3
+- **Release 下载**：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-v4
   - `boot-gaming.img`（推荐，游戏优化版）
   - `boot-standard.img`（保守版）
   - `ak3-gaming.zip` / `ak3-standard.zip`（AnyKernel3，可配合刷机 App 使用）
@@ -92,6 +92,30 @@ fastboot reboot
 ```
 
 **回滚**：`fastboot flash boot boot.img`（用你备份的原厂 boot.img 或官方固件包里的 boot.img）。
+
+---
+
+## CRC / 版本报警（兼容模式，重要）
+
+原厂 `vendor_dlkm` 里的模块是小米/Google 预编译的，其符号 CRC（genksyms）与本仓库自编译内核有约
+350 个符号的数值差异（**符号无缺失**）。为了不隐瞒问题，本内核**开启了 CRC / vermagic 告警**：
+
+- 加载模块时如果发现 CRC 与内核不一致，会打印：
+  `xxx.ko: symbol yyy CRC mismatch: module 0x........, kernel 0x........`
+- 若模块 vermagic 的 release 部分与内核不同（带 CRC 的模块内核默认容忍），也会打印：
+  `xxx.ko: vermagic '...' differs from kernel '...' (module has CRCs, allowed)`
+- 每个模块最多打印 16 条不一致明细，之后打印 `more CRC mismatches suppressed`，避免 dmesg 刷屏；
+- 默认是**告警但不拦截**（兼容模式），保证系统能正常开机；如需严格模式（不一致模块拒绝加载），
+  在 `patches/common/0025-module-abi-alarm.patch` 里把 `MODULE_CRC_MISMATCH_IS_FATAL` 改为 `1` 重新构建即可。
+
+刷入后建议检查：
+```bash
+dmesg | grep -iE 'CRC mismatch|vermagic .* differs|disagrees about version'
+```
+
+> 关于版本串：GKI 标准下内核 release 串并非必须与原厂一致（带 `__versions` 的模块在比对 vermagic 时
+> 会忽略 release 部分），本仓库仍保留与原厂相同的版本串 `5.15.194-android13-8-00019-gf4321180a397-ab15212794`，
+> 只为最大化兼容性、减少差异；真正决定驱动能否工作的是 KMI 符号/CRC 兼容性，本内核用告警把差异暴露出来。
 
 **刷后自检**
 

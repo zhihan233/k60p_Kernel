@@ -4,7 +4,7 @@
 > 最后更新：2026-11-25 19:30（Asia/Hong_Kong）
 > 仓库 HEAD：`e57898c`
 > 构建仓库：https://github.com/zhihan233/k60p_Kernel
-> 成品 Release：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-v3
+> 成品 Release：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-v4
 
 ---
 
@@ -21,7 +21,7 @@
 
 ---
 
-## 2. 最终交付物（local: `deliver/`，线上: Release k60p-kernel-v3）
+## 2. 最终交付物（local: `deliver/`，线上: Release k60p-kernel-v4）
 
 | 文件 | 大小 (B) | SHA256 |
 |---|---|---|
@@ -61,7 +61,7 @@
 
 ### 3.3 模块兼容（ABI 报告）
 - 对比原厂 404 个 vendor_dlkm 模块：**缺失符号 0，未分类缺失 0**，`not_in_kernel_symvers=1502`（属其它 vendor 模块导出，正常）
-- 唯一差异：350 个符号的 genksyms **CRC 数值**不同 → 已由 `0025-module-ignore-crc.patch` 在内核加载模块时跳过 CRC 比对（详见第 4.4 节）
+- 唯一差异：350 个符号的 genksyms **CRC 数值**不同 → 已由 `0025-module-abi-alarm.patch` 打开告警（CRC/vermagic 不一致会打印 dmesg，默认继续加载，详见第 4.4 节）
 - 实机验证：400+ 模块正常加载、系统正常启动、KernelSU/SukiSU 正常（用户已确认）
 
 ### 3.4 关键 config（gaming 变体，已验证开启）
@@ -105,17 +105,18 @@ CONFIG_SHADOW_CALL_STACK=y  CONFIG_MODVERSIONS=y  CONFIG_TRIM_UNUSED_KSYMS=y
   38 个 KMI 列表的并集，约 8585 个符号），`scripts/build.sh` 设置
   `CONFIG_UNUSED_KSYMS_WHITELIST=$ROOT/kernel/kmi_whitelist.txt` 并保持 TRIM=y。
 
-### 4.4 模块 CRC 跳过补丁（`patches/common/0025-module-ignore-crc.patch`）
-- 现象：自编译内核与原厂模块有 350 个符号 CRC 数值不同（**无缺失**），模块加载报
-  `disagrees about version of symbol`。
+### 4.4 模块 CRC / vermagic 告警（`patches/common/0025-module-abi-alarm.patch`）
+- 现象：自编译内核与原厂模块有 350 个符号 CRC 数值不同（**无缺失**），若严格校验模块会拒载。
 - 排查：换了 tag194/f432 两套源码、clang14/clang21 两套编译器、stock/droid/full 三套 config，
   mismatch 集合完全一致 → 属构建环境层面差异（genksyms 环境差异），非配置写错。
-- 方案：在 `kernel/module.c:check_version()` 开头（**声明之后**！）`return 1;` 跳过 CRC 数值比对。
-  - 只跳过数值比对；vermagic 仍与原厂一致；`module_layout` CRC 本身是匹配的；
-  - 关键结构体（device/sk_buff/task_struct 等）布局与原厂一致（SYSVIPC 用官方 kABI padding），
-    因此跳过校验安全；
-- 注意：`return 1;` 必须放在变量声明之后，否则触发 `-Wdeclaration-after-statement` Werror（见 7.7）。
-
+- 方案：在 `kernel/module.c` 打开 ABI 告警（**兼容模式**）：
+  - `check_version()`：CRC 不一致时打印
+    `symbol <name> CRC mismatch: module 0x........, kernel 0x........`（每模块最多 16 条，
+    之后 `more CRC mismatches suppressed`），默认继续加载；
+  - `check_modinfo()`：模块 vermagic release 与内核不同（带 CRC 模块默认容忍）时也打印告警；
+  - 默认 `MODULE_CRC_MISMATCH_IS_FATAL=0`（告警不拦截，保证能开机）；改为 1 即严格模式。
+- 注意：新增代码必须放在函数变量声明之后，否则触发
+  `-Wdeclaration-after-statement` Werror（历史故障见 7.7）。
 ### 4.5 ThinLTO（替代 Full LTO）
 - 原厂 config 是 `CONFIG_LTO_CLANG_FULL=y`，但在 GitHub 免费 runner 上 Full LTO 链接阶段
   反复 OOM（`hosted runner lost communication`，多次失败，见 7.3）。
@@ -159,7 +160,7 @@ patches/common/
                                                         prepare 自动选可用槽位，其余跳过）
   0010-baseband-guard-5.15.patch                        BBG 集成
   0020..0024-*.patch                                    游戏/性能小优化
-  0025-module-ignore-crc.patch                          模块 CRC 跳过
+  0025-module-abi-alarm.patch                            模块 CRC/vermagic 告警（兼容模式）
 patches/full/0030-net-tcp-bbrv3-android13-5.15.patch    BBRv3
 scripts/
   prepare-runner.sh              runner 清理磁盘 + 安装构建依赖（bc/bison/flex/openssl/...）
@@ -238,7 +239,7 @@ docs/HANDOFF.md                  本文档
   git ls-remote；需要日志时用临时 `collect-run` 工作流（用 `${{ github.token }}` 跑 `gh`）——
   该工作流已随清理删除，可参考 git 历史恢复。
 
-### 7.7 CRC 跳过补丁第一版编译失败
+### 7.7 ABI 告警补丁的编译注意（历史：第一版 CRC 补丁编译失败）
 - 现象：`error: mixing declarations and code is a C99 extension [-Werror,-Wdeclaration-after-statement]`
 - 解决：`return 1;` 放在函数变量声明之后（当前补丁已修正）。
 
@@ -290,8 +291,8 @@ dmesg | grep -iE 'unknown symbol|disagrees about version|CFI failure' | head
 
 ## 9. 后续可做的事
 
-1. **纯净版（可选）**：若以后找到与原厂完全一致的 genksyms 环境，可去掉 CRC 跳过补丁重出；
-   目前实机验证已证明跳过方案可用，非必需。
+1. **严格模式（可选）**：把 `0025-module-abi-alarm.patch` 的 `MODULE_CRC_MISMATCH_IS_FATAL` 改为 1，
+   让 CRC 不一致的模块直接拒绝加载（fail-fast）；普通使用建议保持默认告警模式。
 2. **上游更新**：当 Google 更新 `kernel/common` 对应分支后，只需改 `config/sources.lock.json`
    的 commit（及 vermagic 相关字段），push 即可云端重建。
 3. **进一步游戏调优**：uclamp 参数、sched 微调、IO/GPU 内核参数等（注意每改 header/结构体都要
@@ -314,7 +315,7 @@ git -c core.sshCommand="ssh -o ProxyCommand=none -p 443" push origin main
 # 监控构建（无需 token）
 #   https://github.com/zhihan233/k60p_Kernel/actions
 # 下载 release（GitHub 直连即可）
-#   https://github.com/zhihan233/k60p_Kernel/releases/download/k60p-kernel-v3/<file>
+#   https://github.com/zhihan233/k60p_Kernel/releases/download/k60p-kernel-v4/<file>
 
 # 本地校验（python：work/verify_v3_final.py，需 14 个文件在 deliver/）
 python work/verify_v3_final.py

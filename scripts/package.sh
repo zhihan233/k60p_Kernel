@@ -99,7 +99,7 @@ lines = [
     f"- 内核版本: `{info.get('kernel_release','?')}` (vermagic 与原厂完全一致)",
     f"- 工具链: {info.get('toolchain',{}).get('version','?')}",
     f"- 功能: Droidspaces 容器支持 / BBG 防格机 / {'BBRv3+fq_codel+游戏优化' if variant=='gaming' else 'BBR+fq_codel 游戏优化'}",
-    f"- 原厂 vendor 模块 CRC 校验: {info.get('vendor_module_crc_check','?')}",
+    f"- 原厂 vendor 模块 CRC 对比: {info.get('vendor_module_crc_check','?')} (告警模式：运行时不匹配会打印到 dmesg)",
     "",
 ]
 Path(f'dist/RELEASE-{variant}.md').write_text('\n'.join(lines))
