@@ -118,7 +118,7 @@ baseline = read('config/device-baseline.config')
 variant = sys.argv[1]
 
 # 原厂启动硬约束（改了就 bootloop：KASAN/CFI/SHADOW_CALL_STACK/LTO/BTF/MODVERSIONS）
-for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG', 'CONFIG_LTO_CLANG_FULL',
+for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG',
              'CONFIG_KASAN_HW_TAGS', 'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
              'CONFIG_MODULE_SIG_PROTECT', 'CONFIG_MODULE_SIG'):
     assert actual.get(name) == baseline.get(name) == 'y', (name, actual.get(name), baseline.get(name))
@@ -130,6 +130,10 @@ for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPF
              'CONFIG_USER_NS', 'CONFIG_POSIX_MQUEUE', 'CONFIG_NETFILTER_XT_MATCH_ADDRTYPE',
              'CONFIG_MACVLAN', 'CONFIG_IP6_NF_NAT', 'CONFIG_IP6_NF_TARGET_MASQUERADE'):
     assert actual.get(name) == 'y', (name, actual.get(name))
+# CI 稳定性：ThinLTO（Full LTO 在共享 runner 上会 OOM）
+assert actual.get('CONFIG_LTO_CLANG_THIN') == 'y', actual.get('CONFIG_LTO_CLANG_THIN')
+assert actual.get('CONFIG_LTO_CLANG_FULL') != 'y', actual.get('CONFIG_LTO_CLANG_FULL')
+
 # BBG
 assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
 assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
