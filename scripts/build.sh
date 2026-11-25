@@ -24,7 +24,7 @@ export KBUILD_BUILD_USER=socrates KBUILD_BUILD_HOST=github-actions
 export KBUILD_BUILD_VERSION=1
 export LOCALVERSION="$LOCALVER"
 export BUILD_NUMBER="$BUILD_NUM"
-JOBS="${JOBS:-$(nproc)}"
+JOBS="${JOBS:-$(( $(nproc) < 3 ? $(nproc) : 3 ))}"
 
 echo "== clang: $(clang --version | head -1)"
 echo "== variant: ${VARIANT}, jobs: ${JOBS}"
@@ -148,7 +148,7 @@ PY
 
 # ---------------- 3. 编译 ----------------
 set +e
-make -C kernel O="$ROOT/out" -j"$JOBS" Image modules 2>&1 | tee dist/build.log
+# timeout 防止个别 runner 卡死无限占用（正常构建 15-25 分钟）\ntimeout --signal=KILL 4200 make -C kernel O="$ROOT/out" -j"$JOBS" Image modules 2>&1 | tee dist/build.log
 rc=${PIPESTATUS[0]}
 set -e
 if [[ "$rc" != 0 ]]; then
