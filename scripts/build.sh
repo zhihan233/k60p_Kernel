@@ -148,7 +148,8 @@ PY
 
 # ---------------- 3. 编译 ----------------
 set +e
-# timeout 防止个别 runner 卡死无限占用（正常构建 15-25 分钟）\ntimeout --signal=KILL 4200 make -C kernel O="$ROOT/out" -j"$JOBS" Image modules 2>&1 | tee dist/build.log
+# timeout 防止个别 runner 卡死无限占用（正常构建 15-25 分钟）
+timeout --signal=KILL 4200 make -C kernel O="$ROOT/out" -j"$JOBS" Image modules 2>&1 | tee dist/build.log
 rc=${PIPESTATUS[0]}
 set -e
 if [[ "$rc" != 0 ]]; then
