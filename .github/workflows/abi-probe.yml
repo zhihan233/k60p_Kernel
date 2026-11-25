@@ -18,32 +18,24 @@ concurrency:
 jobs:
   probe:
     name: probe-${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: f432-stock-c21
-            os: ubuntu-24.04
+          - name: f432-stock-thin
             fragments: ""
-            toolchain: c21
-            lto: full
-          - name: f432-droid-c21
-            os: ubuntu-24.04
-            fragments: "config/probe-droidspaces.config"
-            toolchain: c21
-            lto: full
-          - name: f432-full-c21
-            os: ubuntu-24.04
+            kcflags: ""
+          - name: f432-full-thin
             fragments: "config/features-common.config,config/features-gaming.config"
-            toolchain: c21
-            lto: full
-          - name: f432-full-c14
-            os: ubuntu-22.04
+            kcflags: ""
+          - name: f432-stock-thin-android
+            fragments: ""
+            kcflags: "-D__ANDROID_COMMON_KERNEL__"
+          - name: f432-full-thin-android
             fragments: "config/features-common.config,config/features-gaming.config"
-            toolchain: c14
-            lto: thin
+            kcflags: "-D__ANDROID_COMMON_KERNEL__"
     steps:
       - uses: actions/checkout@v4
 
@@ -53,8 +45,7 @@ jobs:
             /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift || true
           df -h /
 
-      - name: Install deps (24.04)
-        if: matrix.os == 'ubuntu-24.04'
+      - name: Install deps
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
@@ -62,23 +53,14 @@ jobs:
             patch zip unzip curl git python3 lz4 zstd kmod openssl file
           df -h /
 
-      - name: Install deps (22.04, includes clang-14)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            bc bison flex libssl-dev libelf-dev dwarves cpio build-essential \
-            patch zip unzip curl git python3 lz4 zstd kmod openssl file \
-            clang-14 lld-14 llvm-14
-          df -h /
-
       - name: Run ABI probe
         id: probe
         env:
           PROBE_NAME: ${{ matrix.name }}
           PROBE_FRAGMENTS: ${{ matrix.fragments }}
-          PROBE_TOOLCHAIN: ${{ matrix.toolchain }}
-          PROBE_LTO: ${{ matrix.lto }}
+          PROBE_TOOLCHAIN: c21
+          PROBE_LTO: thin
+          PROBE_KCFLAGS: ${{ matrix.kcflags }}
         run: |
           set -o pipefail
           bash .probe/probe.sh "$PROBE_NAME" "$PROBE_FRAGMENTS" "$PROBE_TOOLCHAIN" "$PROBE_LTO" 2>&1 | tee "probe-${PROBE_NAME}.log"
@@ -94,10 +76,9 @@ jobs:
           {
             echo "name=${NAME}"
             echo "probe_outcome=${PROBE_OUTCOME}"
-            echo "os=${{ matrix.os }}"
             echo "fragments=${{ matrix.fragments }}"
-            echo "toolchain=${{ matrix.toolchain }}"
-            echo "lto=${{ matrix.lto }}"
+            echo "kcflags=${{ matrix.kcflags }}"
+            echo "toolchain=c21 lto=thin"
           } > log/summary.txt
           df -h >> log/summary.txt || true
           for f in dist/probe-* ; do

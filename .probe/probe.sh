@@ -124,6 +124,10 @@ else
 fi
 
 export ARCH=arm64 LLVM=1 LLVM_IAS=1
+if [[ -n "${PROBE_KCFLAGS:-}" ]]; then
+  export KCFLAGS="$PROBE_KCFLAGS"
+  echo "== KCFLAGS: $KCFLAGS"
+fi
 export CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 export KBUILD_BUILD_USER=probe KBUILD_BUILD_HOST=ci
 export LOCALVERSION="-android13-8"
