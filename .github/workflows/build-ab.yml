@@ -1,0 +1,136 @@
+name: build-ab
+
+# 备用构建工作流：独立的 concurrency group，避免被挂死的 build-kernel run 阻塞。
+# 产物发布到 k60p-kernel-v4，避免与仍在队列中的旧 run 冲突。
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-ab.yml'
+      - '.abtrigger/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-ab
+  cancel-in-progress: true
+
+jobs:
+  kernel:
+    name: kernel-${{ matrix.variant }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [standard, gaming]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare runner (free disk + build deps)
+        id: runner
+        run: |
+          set -o pipefail
+          mkdir -p dist
+          bash scripts/prepare-runner.sh 2>&1 | tee "dist/prepare-runner-${{ matrix.variant }}.log"
+
+      - name: Restore compiler cache
+        id: cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: toolchain/clang-r563880c
+          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+
+      - name: Fetch sources, compiler, patches
+        id: prepare
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -o pipefail
+          mkdir -p dist
+          bash scripts/prepare.sh 2>&1 | tee "dist/prepare-${{ matrix.variant }}.log"
+
+      - name: Save compiler cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: toolchain/clang-r563880c
+          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+
+      - name: Allocate link memory (Full LTO)
+        id: swap
+        run: |
+          set -euo pipefail
+          available=$(df -B1 --output=avail . | tail -1)
+          swap_gib=$(( available / 1073741824 - 18 ))
+          if (( swap_gib > 24 )); then swap_gib=24; fi
+          if (( swap_gib < 8 )); then
+            echo "Insufficient disk for Full LTO output and swap (swap_gib=${swap_gib})"
+            df -h .
+            exit 1
+          fi
+          sudo fallocate -l "${swap_gib}G" /swapfile-socrates
+          sudo chmod 600 /swapfile-socrates
+          sudo mkswap /swapfile-socrates >/dev/null
+          sudo swapon /swapfile-socrates
+          df -h .
+          free -h
+
+      - name: Build kernel and verify vendor module ABI
+        id: build
+        continue-on-error: true
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: bash scripts/build.sh
+
+      - name: Package Image / boot.img / AnyKernel3
+        id: package
+        if: always()
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: bash scripts/package.sh
+
+      - name: Collect step outcomes
+        if: always()
+        env:
+          VARIANT: ${{ matrix.variant }}
+          OUTCOME_RUNNER: ${{ steps.runner.outcome }}
+          OUTCOME_CACHE: ${{ steps.cache.outcome }}
+          OUTCOME_PREPARE: ${{ steps.prepare.outcome }}
+          OUTCOME_SWAP: ${{ steps.swap.outcome }}
+          OUTCOME_BUILD: ${{ steps.build.outcome }}
+          OUTCOME_PACKAGE: ${{ steps.package.outcome }}
+        run: |
+          mkdir -p dist/ci-artifacts
+          {
+            echo "variant=${VARIANT}"
+            echo "runner=${OUTCOME_RUNNER}"
+            echo "cache=${OUTCOME_CACHE}"
+            echo "prepare=${OUTCOME_PREPARE}"
+            echo "swap=${OUTCOME_SWAP}"
+            echo "build=${OUTCOME_BUILD}"
+            echo "package=${OUTCOME_PACKAGE}"
+          } > "dist/ci-artifacts/steps-${VARIANT}.txt"
+
+      - name: Publish this variant immediately (k60p-kernel-v4)
+        if: always()
+        env:
+          VARIANT: ${{ matrix.variant }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed -i 's/TAG="k60p-kernel-v3"/TAG="k60p-kernel-v4"/' scripts/publish-variant.sh
+          grep -n 'TAG=' scripts/publish-variant.sh || true
+          bash scripts/publish-variant.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.variant }}
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 30
