@@ -1,0 +1,21 @@
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1246,10 +1246,18 @@
+ static int check_version(const struct load_info *info,
+ 			 const char *symname,
+ 			 struct module *mod,
+ 			 const s32 *crc)
+ {
++	/*
++	 * Custom kernel: skip symbol CRC verification.
++	 * Stock vendor modules are prebuilt: their genksyms CRCs may differ
++	 * from a self-built kernel. Skipping the CRC check avoids
++	 * "disagrees about version of symbol" and lets the 400+ stock
++	 * vendor_dlkm modules load normally.
++	 */
++	return 1;
+ 	Elf_Shdr *sechdrs = info->sechdrs;
+ 	unsigned int versindex = info->index.vers;
+ 	unsigned int i, num_versions;
+ 	struct modversion_info *versions;
+ 

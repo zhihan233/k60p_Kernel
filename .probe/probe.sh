@@ -12,6 +12,8 @@ KERNEL_URL="https://android.googlesource.com/kernel/common/+archive/$STOCK_COMMI
 if [[ "$TOOLCHAIN" == "c21" ]]; then
   T_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/9916fb51ccb914d62d35ad9a7b9b21d2ef046928/clang-r563880c.tar.gz"
   T_DIR="clang-r563880c"
+elif [[ "$TOOLCHAIN" == "andr14" ]]; then
+  T_DIR="clang-r450784e"
 else
   T_DIR="clang14-symlinks"
 fi
@@ -35,6 +37,17 @@ if [[ "$TOOLCHAIN" == "c21" ]]; then
     curl -fsSL --retry 3 -o .cache-clang.tar.gz "$T_URL"
     tar -xzf .cache-clang.tar.gz -C "toolchain/$T_DIR"
     rm -f .cache-clang.tar.gz
+  fi
+  export PATH="$ROOT/toolchain/$T_DIR/bin:$PATH"
+elif [[ "$TOOLCHAIN" == "andr14" ]]; then
+  if [[ ! -x "toolchain/$T_DIR/bin/clang" ]]; then
+    echo "== sparse clone Android clang r450784e"
+    rm -rf .clang-prec
+    git clone --depth 1 --filter=blob:none --sparse \
+      https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 .clang-prec
+    ( cd .clang-prec && git sparse-checkout set clang-r450784e )
+    mv .clang-prec/clang-r450784e toolchain/
+    rm -rf .clang-prec
   fi
   export PATH="$ROOT/toolchain/$T_DIR/bin:$PATH"
 else
