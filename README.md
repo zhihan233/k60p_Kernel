@@ -175,7 +175,7 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - 构建脚本：`los/scripts/{prepare-runner,prepare,build,package}.sh`
 - 版本锁定：`los/config/sources.lock.json`；设备基线配置：`los/config/device-baseline.config`
 - 本地辅助工具：`tools/`（流水线监控、产物校验、设备验收脚本）
-- 交接 / 踩坑记录：[`HANDOFF.md`](HANDOFF.md)
+- 交接文档（维护向）：[`HANDOFF.md`](HANDOFF.md)
 - 云端 runner 自带外网，**不需要**本地开代理
 
 ---
