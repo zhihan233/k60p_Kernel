@@ -1,10 +1,44 @@
-# HANDOFF（2026-11-26 18:40 更新）— LOS ThinLTO 构建 ✅ 成功，等待实机验证
+# HANDOFF（2026-11-26 19:20 更新）— LOS ThinLTO 内核 ✅ 构建成功 + ✅ 实机验证通过（临时启动）
 
 ## 一句话状态
-**ThinLTO run 4 `45797343370` 全绿**（build 16.5 分钟完成，总时长 ~20 分钟）。
-**ABI 关键指标：401 模块 / 3971 符号 / `crc_mismatches=0` / `missing_symbols=0` / `unclassified=0`**
-→ 厂商 vendor 模块应能干净加载。产物已从 Release `k60p-kernel-los-v1` 下载并校验通过
-（本地 `deliver/`），下一步：**交用户 `fastboot boot boot-los.img` 实测**（先别 flash）。
+ThinLTO run 4 `45797343370` 全绿，ABI **0 mismatch**；产物已校验并本地保存（`deliver/`）。
+**2026-11-26 19:10-19:15 用户在 `fastboot boot` 临时启动下完成实机验证：人参与的测试（扬声器/麦克风/摄像头）
+用户已确认正常；终端内测试（模块/root/BBG/Droidspaces/网络/充电/稳定性）由 agent 全部跑通，见下。
+原厂 boot 已备份为 `deliver/stock-boot_a.img`（sha256 `5364ec15…250e`，192MB 分区镜像，版本串
+`5.15.194-android13-8-00019-gf4321180a397-ab15212794`）。下一步：用户确认后永久刷入 + 清理旧 ACK 流水线。
+
+## 实机验证结果（19:10-19:15，临时启动，HyperOS 3.0.304 原厂系统）
+- 内核：`uname -r = 5.15.211-g093e3da978e7`；`/proc/version` 显示 socrates@github-actions clang 21
+- 模块：`/proc/modules` = **401**；dmesg 中 `disagrees about version / CFI failure / Unknown symbol /
+  invalid module format` 全为 **0**；对比 evidence 的 404 个 .ko，实际只需要加载的厂商模块全部加载
+  （差的是 debug/test 模块与其它机型 WiFi 模块；`kiwi_v2` 即 `qca_cld3_kiwi_v2.ko` 的模块名，`kernelsu` 为 LKM 额外加载）
+- KernelSU LKM：`su -c id` → `uid=0 ... context=u:r:ksu:s0`；ksud 3.3.1；`kernelsu` 模块已加载
+- BBG 防格机：`/sys/kernel/security/lsm = capability,safesetid,selinux,baseband_guard`；
+  dmesg 有 `baseband_guard: pid ... marked as untrusted`；
+  **功能实测**：root(`u:r:ksu:s0`) 下 `chmod` 受保护分区（`persist`、`modem_a`）→ `Operation not permitted`
+  且 dmesg 打印 `baseband_guard: deny setattr on protected partition dev=... pid=... comm=chmod`；
+  白名单分区 `boot_a` 的 chmod 正常放行（已恢复原 mode 600）。测试为设备节点权限位操作，无数据写入。
+- 网络：`wlan0` 11ax 2401Mbps，RSSI -18，ping 223.5.5.5 / 百度 0% 丢包；
+  蜂窝：中国移动 NR_SA IN_SERVICE（voice+data HOME），rsrp -83
+- 充电：`battery/status=Charging`，current_now 379mA，constant_charge_current 5A，温度 24.4°C
+- 音频/摄像头：`/proc/asound/cards` = kalama-mtp-snd-card，audioserver/audio HAL 运行；
+  `/dev/video0/1/32/33` 存在，cameraserver + vendor camera provider 运行（用户已实测）
+- 显示：1440x3200，60/90/120Hz；蓝牙协议栈服务运行；Droidspaces app 运行，
+  `unshare -Ur` / `unshare -Urmpf` 均 rc=0，cgroup v2 可用
+- 稳定性：dmesg 中 `WARNING/BUG/Oops/Call trace/panic` 计数全 0；MGLRU=`0x0003`；`fq_codel` 默认队列；
+  `tcp_available_congestion_control = reno bbr cubic`；zram0 = 12GB（lzo-rle）
+- 注意：`/sys/kernel/security/lsm` 默认未挂载 securityfs，需 `mount -t securityfs none /sys/kernel/security` 后再读
+- 终端测试脚本：`tools/device_test{,2,3,4,5,6}.sh`（push 到 /data/local/tmp 后 root 执行，输出 pull 回 `work/device-test*`）
+
+## 当前下一步
+1. 用户确认后**永久刷入**：`adb reboot bootloader` → `fastboot flash boot deliver/boot-los.img` → `fastboot reboot`
+   （回滚：`fastboot flash boot deliver/stock-boot_a.img`）
+2. 刷入后复查一遍（可选，`tools/device_test.sh` 直接再跑一次）
+3. 清理：`.debug/`、`debug-run.yml`、`artifacts-stockref` 分支、旧 ACK 流水线（`config/`、`scripts/`、`patches/`、
+   `.github/workflows/build.yml`）与旧 Release（v2/v3/v4/latest 等），保留 LOS 流水线 + `k60p-kernel-los-v1`
+4. 可选后续：BBRv3 backport（当前是内核自带 BBR）、游戏调度增强、suspend/待机长稳测试
+
+## 原 18:40 构建结果（run 4，保留备查）
 
 ## 18:40 构建结果（run 4）
 - commit `8a94029` → workflow `build-los` run 4 `45797343370`
