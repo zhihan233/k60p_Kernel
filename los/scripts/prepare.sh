@@ -18,12 +18,28 @@ PY
 K_URL="${LOCK[0]}"; K_SHA="${LOCK[1]}"; T_URL="${LOCK[2]}"; T_COMMIT="${LOCK[3]}"
 T_DIR="${LOCK[4]}"; T_TREE="${LOCK[5]}"; SCMVER="${LOCK[6]}"
 
+# 带校验的下载：Gitiles/codeload 偶发截断，解压前用 gzip -t 验证，失败重试。
+download_checked() { # $1=url  $2=output
+  local url="$1" out="$2" i
+  for i in 1 2 3 4 5; do
+    rm -f "$out"
+    if curl -fL --retry 3 --retry-all-errors --retry-delay 2 -o "$out" "$url" \
+         && gzip -t "$out" 2>/dev/null; then
+      return 0
+    fi
+    echo "!! download attempt ${i} failed or truncated: ${url}"
+    sleep 5
+  done
+  echo "!! download failed after retries: ${url}"
+  return 1
+}
+
 echo "== LOS pipeline: kernel ${SCMVER}, toolchain ${T_DIR}"
 
 # ---------- 1. kernel source ----------
 if [[ ! -f kernel/Makefile ]]; then
   echo "== downloading LOS kernel source"
-  curl -fL --retry 3 "${K_URL}" -o .cache/kernel-source.tar.gz
+  download_checked "${K_URL}" .cache/kernel-source.tar.gz
   printf '%s  %s\n' "${K_SHA}" .cache/kernel-source.tar.gz | sha256sum --check
   tar -xzf .cache/kernel-source.tar.gz --strip-components=1 -C kernel
   rm -f .cache/kernel-source.tar.gz
@@ -45,7 +61,7 @@ PY
 if [[ ! -x "toolchain/${T_DIR}/bin/clang" ]]; then
   echo "== downloading clang: ${T_DIR}"
   mkdir -p "toolchain/${T_DIR}"
-  curl -fL --retry 3 "${T_URL}" -o .cache/clang.tar.gz
+  download_checked "${T_URL}" .cache/clang.tar.gz
   sha256sum .cache/clang.tar.gz > dist/compiler-archive.sha256
   tar -xzf .cache/clang.tar.gz -C "toolchain/${T_DIR}"
   rm -f .cache/clang.tar.gz
