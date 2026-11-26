@@ -19,3 +19,10 @@ deliver-v3/
 *.tar.gz
 .cache-kernel.tar.gz
 .cache-clang.tar.gz
+
+# LineageOS pipeline build dirs
+los/kernel/
+los/toolchain/
+los/out/
+los/dist/
+los/.cache/
