@@ -18,9 +18,10 @@ print(t.get('commit', ''))
 print(t['directory'])
 print(t.get('tree', ''))
 print(t.get('fetch', 'archive'))
+print(t.get('url', ''))
 PY
 )
-K_URL="${LOCK[0]}"; SCMVER="${LOCK[1]}"; T_URL="${LOCK[2]}"; T_COMMIT="${LOCK[3]}"; T_DIR="${LOCK[4]}"; T_TREE="${LOCK[5]}"; T_FETCH="${LOCK[6]}"
+K_URL="${LOCK[0]}"; SCMVER="${LOCK[1]}"; T_URL="${LOCK[2]}"; T_COMMIT="${LOCK[3]}"; T_DIR="${LOCK[4]}"; T_TREE="${LOCK[5]}"; T_FETCH="${LOCK[6]}"; T_REPO_URL="${LOCK[7]}"
 
 echo "== variant: ${VARIANT}"
 
@@ -85,7 +86,7 @@ if [[ ! -x "toolchain/${T_DIR}/bin/clang" ]]; then
     #   2) git log 找到最后包含该目录的 commit
     #   3) sparse-checkout 只拉该目录并 checkout
     rm -rf .cache/prebuilts-clang
-    git clone --filter=blob:none --no-checkout "${T_URL}" .cache/prebuilts-clang
+    git clone --filter=blob:none --no-checkout "${T_REPO_URL}" .cache/prebuilts-clang
     (
       cd .cache/prebuilts-clang
       sha="$(git log -1 --format=%H -- "${T_DIR}")"
