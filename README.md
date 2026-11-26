@@ -135,7 +135,7 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - CI 工作流：`.github/workflows/build-los.yml`（push 修改 `los/**` 自动触发，ThinLTO，约 20 分钟）
 - 构建脚本：`los/scripts/{prepare-runner,prepare,build,package}.sh`
 - 构建参数与版本锁定：`los/config/sources.lock.json`；设备基线配置：`los/config/device-baseline.config`
-- 交接/踩坑记录：[`HANDOFF.md`](HANDOFF.md)、[`docs/BUILD-NOTES.md`](docs/BUILD-NOTES.md)
+- 交接/踩坑记录：[`HANDOFF.md`](HANDOFF.md)
 - 云端 runner 自带外网，**不需要**本地开代理
 
 ---

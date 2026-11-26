@@ -1,3 +1,4 @@
+# 本地构建/缓存目录（不入库）
 out/
 kernel/
 toolchain/
@@ -6,21 +7,14 @@ artifacts/
 .cache/
 work/
 research/
-patches/bbg/
-patches/droidspaces/
-patches/gaming/
+deliver/
+*.tar.gz
+__pycache__/
+*.pyc
 *.rej
 *.orig
 
-__pycache__/
-*.pyc
-deliver/
-deliver-v3/
-*.tar.gz
-.cache-kernel.tar.gz
-.cache-clang.tar.gz
-
-# LineageOS pipeline build dirs
+# LineageOS 流水线构建目录（CI 内生成）
 los/kernel/
 los/toolchain/
 los/out/
