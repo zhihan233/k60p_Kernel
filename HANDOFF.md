@@ -1,10 +1,47 @@
-# HANDOFF（2026-11-26 18:01 更新）— LineageOS ThinLTO 构建 run 4 进行中
+# HANDOFF（2026-11-26 18:40 更新）— LOS ThinLTO 构建 ✅ 成功，等待实机验证
 
 ## 一句话状态
-18:01 已把 LOS 构建切成 **ThinLTO** 并 push（commit `8a94029`），`build-los` **run 4 `45797343370`**
-进行中（预计 25-40 分钟）。构建/打包成功后 workflow 会**自动发布 Release `k60p-kernel-los-v1`**。
-下一步：下载产物 → 校验 ABI（`crc_mismatches==0`、`status-los.txt` 有 `abi=OK`）→ 交用户
-`fastboot boot boot-los.img` 实测（先别 flash）。
+**ThinLTO run 4 `45797343370` 全绿**（build 16.5 分钟完成，总时长 ~20 分钟）。
+**ABI 关键指标：401 模块 / 3971 符号 / `crc_mismatches=0` / `missing_symbols=0` / `unclassified=0`**
+→ 厂商 vendor 模块应能干净加载。产物已从 Release `k60p-kernel-los-v1` 下载并校验通过
+（本地 `deliver/`），下一步：**交用户 `fastboot boot boot-los.img` 实测**（先别 flash）。
+
+## 18:40 构建结果（run 4）
+- commit `8a94029` → workflow `build-los` run 4 `45797343370`
+- 步骤耗时：prepare-runner 2.5m → restore cache 24s → **prepare 43s**（缓存命中 clang；
+  源码+7 补丁全部应用）→ swap 0s → **build 16m35s（ThinLTO）** → package 5s →
+  publish 6s → artifacts 4s，全部 success
+- `abi-report-los.json`：`modules=401, matched_symbols=3971, crc_mismatches=[],
+  not_in_kernel_symvers=573`（这 573 是**由其他 vendor 模块导出**的符号，如
+  `__devm_regmap_init_swr`/`__gpr_driver_register`/`__traceiter_*`，属正常；
+  `unclassified_missing_imports=0`, `missing_symbols=0`）
+- `build-los.json`：kernel_release `5.15.211-g093e3da978e7`，ThinLTO 注明，hash 与 Release 一致
+- 产物校验（`tools/check_boot.py`）：
+  - `boot-los.img` 43,315,200 B，magic `ANDROID!`，header v4 / header_size 1584，
+    kernel_size 43,309,568，ramdisk 0，内嵌版本串 `5.15.211-g093e3da978e7`，
+    sha256 `bf6db3cc…953f` 与 `SHA256SUMS-los` 一致
+  - `ak3-los.zip` 22,597,425 B（sha256 `b1819b07…9eb6` ✓）、`Image-los` 43,309,568 B
+    （sha256 `865c9800…c4a7` ✓）
+- kernel config 抽查：`LTO_CLANG_THIN=y`/`FULL` off、CFI/MODVERSIONS/KASAN_HW_TAGS/SCS 保留、
+  `CONFIG_BBG=y` + LSM 含 `baseband_guard`、SYSVIPC/POSIX_MQUEUE/各类 NS/ipset/macvlan/tmpfs
+  全 y、`DEFAULT_FQ_CODEL=y`、CAKE/FQ_CODEL/BBR=y、`LRU_GEN_ENABLED=y`、
+  `TRIM_UNUSED_KSYMS` off
+- 本地调试设施：`tools/monitor_run.ps1`（用 job 页面 HTML 轮询 step 状态，无需 API 限额）、
+  `tools/check_boot.py`、`tools/fetch_release.ps1`、`tools/parse_actions.py`
+
+## 当前下一步（等用户实测）
+1. 用户 `fastboot boot boot-los.img`（**先别 flash**，临时引导重启即回官方）
+2. 重点验证：**扬声器、摄像头（前后/录像）**、WiFi、充电/电池、BBG
+   （`cat /sys/kernel/security/lsm` 含 `baseband_guard`）、Droidspaces 运行、KernelSU root
+3. adb 检查：`su -c "lsmod | wc -l"` ≈ 402；
+   `dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'` 应空
+   - adb：`R:\platform-tools\adb.exe`（设备当前官方内核；offline 时 kill-server/start-server/reconnect offline）
+4. 通过后：`fastboot flash boot boot-los.img` 永久刷入（也可用 `ak3-los.zip` 在 KernelSU/rec 里刷）；
+   再更新 README 为 LOS 基线 + Release 链接，清理 `.debug/`、`debug-run.yml`、`artifacts-stockref`
+   分支、旧 ACK 流水线与 Release
+5. 若实机有问题：先看 `dmesg | grep -iE 'disagrees|CFI|Unknown symbol|avc:'`；
+   音频/摄像头问题优先查 LOS 基线本身是否含对应 vendor 驱动配置（`kernel-los.config` 在 deliver/）
+
 
 ## 18:01 相对 14:00 的改动
 - `los/scripts/build.sh`：`cp config/device-baseline.config out/.config` 后，对
