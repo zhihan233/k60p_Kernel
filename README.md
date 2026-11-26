@@ -152,7 +152,11 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 
 **原厂组件**：`vendor_dlkm` / `vendor_boot` / `init_boot` / `dtbo` 等均原样保留，仅替换 boot 分区的内核 Image；原厂 400+ 模块按原方式工作，KernelSU 以 LKM 模式加载 `kernelsu` 模块（非本内核内置）。
 
-**许可**：内核源码与各补丁版权归各自上游作者（GPL-2.0 等，详见各文件头）；本仓库构建脚本与自写补丁以 GPL-2.0 提供。
+**许可**
+
+- 本仓库自行编写的构建脚本、内核配置与 `tools/` 辅助脚本以 **GPL-2.0-only** 发布（脚本文件头带 SPDX 标识），完整许可文本见 [`LICENSE`](LICENSE)；
+- 内核源码与 `los/patches/` 中的补丁为**第三方上游作品**（作者 / 来源见各补丁头），版权归各自作者，按其原始许可证（GPL-2.0 等）分发；
+- 本仓库仅做源码下载、打补丁与构建编排，不修改第三方源码分发的许可证。
 
 ---
 

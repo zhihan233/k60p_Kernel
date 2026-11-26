@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-only
 # 用设备基线 config + Droidspaces/BBG/游戏配置构建 LineageOS 内核，并对比厂商模块 CRC。
 set -euo pipefail
 cd "$(dirname "$0")/.."

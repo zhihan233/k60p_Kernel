@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 """Compare a built Module.symvers against the phone's actual module imports.
 
 This checks imported symbol CRCs. It does not certify runtime driver behavior.

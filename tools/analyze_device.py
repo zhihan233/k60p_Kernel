@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-only
 """分析设备内核验收输出（work/device-test-*）。"""
 import json
 import re

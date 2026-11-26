@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-only
 # 下载 LineageOS sm8550 内核源码 + AOSP clang，打补丁并准备构建环境。
 # 运行目录: <repo>/los
 set -euo pipefail

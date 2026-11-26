@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 param(
   [string]$Tag = 'k60p-kernel-los-v1',
   [string]$OutDir = 'deliver',

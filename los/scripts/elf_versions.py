@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 """Read Linux module __versions from uncompressed ELF64 little-endian .ko files.
 
 Uses only Python's standard library; works on Windows and GitHub runners.

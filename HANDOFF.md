@@ -47,12 +47,13 @@
 ```
 los/                  # LineageOS 基线流水线（唯一构建流水线）
   config/             # sources.lock.json（内核/工具链/补丁版本锁）、device-baseline.config、droidspaces/extras config、anykernel.sh
-  patches/            # 0001 sysvipc kABI padding, 0010 BBG, 0020–0024 调度/内存小补丁
+  patches/            # 0001 sysvipc kABI padding, 0010 BBG, 0020–0024 调度/内存小补丁（均为第三方上游补丁，作者见文件头）
   scripts/            # prepare-runner / prepare / build / package / make_bootimg / check_module_abi / elf_versions / verify_git_tree
   evidence/           # vendor-module-versions.json（404 个原厂模块的导入符号 CRC 证据）
 .github/workflows/build-los.yml   # 唯一 CI：push 改 los/** 触发，ThinLTO 全流程（prepare→build→package→release）
 tools/                # 本地辅助：parse_actions.py / monitor_run.ps1（HTML 轮询 step 状态）/ check_boot.py /
                       # fetch_release.ps1 / analyze_device.py / device_test*.sh
+LICENSE               # GPL-2.0-only 许可全文（脚本/配置带 SPDX 标识；第三方源码与补丁按其原始许可）
 HANDOFF.md            # 本文件
 README.md             # 项目说明（LOS 基线、验证结果、刷入、自检）
 ```

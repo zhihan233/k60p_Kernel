@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-only
 """Build an Android boot image header v4 (no ramdisk, no signature) for socrates.
 
 Stock boot.img layout (Redmi K60 Pro, HyperOS 3.0.304):

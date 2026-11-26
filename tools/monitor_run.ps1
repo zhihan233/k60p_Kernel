@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 param(
   [string]$RunId = '45797343370',
   [string]$JobId = '139831276006',

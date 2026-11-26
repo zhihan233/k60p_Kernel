@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 """Verify extracted compiler contents against an upstream Git tree ID.
 
 Gitiles tarballs carry generation timestamps, so their compressed SHA256 is not

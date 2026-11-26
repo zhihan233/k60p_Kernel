@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-only
 # 打包：boot.img（header v4）+ AnyKernel3 zip + SHA256SUMS + 发布说明
 set -euo pipefail
 cd "$(dirname "$0")/.."
