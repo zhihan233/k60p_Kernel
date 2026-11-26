@@ -38,6 +38,14 @@ collect_diagnostics() {
 # ---------- 1. config ----------
 cp config/device-baseline.config out/.config
 
+# ThinLTO：Full LTO 在 GitHub runner 上反复内存不足（run 45755782891 第 68 分钟 runner 失联）。
+# ThinLTO 与 Full LTO 生成代码等价，genksyms CRC / CFI 类型哈希 / vermagic 均不受影响。
+echo "== switching LTO to Thin"
+for cfg in kernel/arch/arm64/configs/gki_defconfig out/.config; do
+  kernel/scripts/config --file "$cfg" --enable LTO_CLANG_THIN
+  kernel/scripts/config --file "$cfg" --disable LTO_CLANG_FULL
+done
+
 enable_cfg() { # $1=name, applies to both gki_defconfig and out/.config
   local name="$1"
   kernel/scripts/config --file kernel/arch/arm64/configs/gki_defconfig --enable "$name"
@@ -99,10 +107,13 @@ def read(path):
 actual = read('out/.config')
 baseline = read('config/device-baseline.config')
 
-for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG', 'CONFIG_LTO_CLANG_FULL',
+for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG', 'CONFIG_LTO', 'CONFIG_LTO_CLANG',
              'CONFIG_KASAN_HW_TAGS', 'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
              'CONFIG_MODULE_SIG_PROTECT', 'CONFIG_TARGET_PRODUCT_SOCRATES'):
     assert actual.get(name) == baseline.get(name) == 'y', (name, actual.get(name), baseline.get(name))
+# LTO 模式：CI 上用 ThinLTO（Full LTO 在 runner 上 OOM），ABI 等价
+assert actual.get('CONFIG_LTO_CLANG_THIN') == 'y', actual.get('CONFIG_LTO_CLANG_THIN')
+assert actual.get('CONFIG_LTO_CLANG_FULL') != 'y', actual.get('CONFIG_LTO_CLANG_FULL')
 for name in ('CONFIG_CFS_BANDWIDTH', 'CONFIG_CGROUP_PIDS'):
     assert actual.get(name) == baseline.get(name), (name, actual.get(name), baseline.get(name))
 
@@ -182,6 +193,7 @@ info = {
         'droidspaces': 'GKI 5.15 官方配置 + SYSVIPC kABI padding 6/7/8',
         'bbg': 'Baseband-guard LSM（boot/recovery 不拦截）',
         'game': 'MGLRU 默认开启 + fq_codel 默认队列 + BBR/ECN + 调度/内存小补丁',
+        'lto': 'ThinLTO（CI 稳定性；与 Full LTO 生成代码等价，不影响 ABI/CRC/vermagic）',
     },
     'abi': {
         'modules': a['modules'], 'matched_symbols': a['matched_symbols'],
