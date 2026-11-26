@@ -1,0 +1,41 @@
+{
+  "device": "socrates",
+  "device_name": "Redmi K60 Pro",
+  "base": "LineageOS 23.2 / android_kernel_xiaomi_sm8550 (msm-kernel vendor tree, KMI gen8)",
+  "rom_target": "HyperOS 3.0.304.0.WMKCNXM / Android 16 (stock vendor partition, vendor kernel 5.15.78)",
+  "release_tag": "k60p-kernel-los-v1",
+  "kernel": {
+    "url": "https://github.com/LineageOS/android_kernel_xiaomi_sm8550.git",
+    "branch": "lineage-23.2",
+    "commit": "093e3da978e7b954d041a261d40975957c7fe6f1",
+    "release": "5.15.211-g093e3da978e7",
+    "scmversion": "-g093e3da978e7",
+    "archive_url": "https://codeload.github.com/LineageOS/android_kernel_xiaomi_sm8550/tar.gz/093e3da978e7b954d041a261d40975957c7fe6f1",
+    "archive_sha256": "62c4c1dbe72dec89b37ff9b903791ed3334f5977baa90681ab1d98f6d070215a",
+    "note": "为什么改用 LineageOS 内核：官方 HyperOS 内核是小米用自己 5.15.78 vendor 树（clang r450784e）编的，公开源码只有 5.15.41，无法复现 ABI。LineageOS 的 sm8550 内核就是同一 QCOM msm-kernel 血统的 vendor 树，其导出符号 CRC/结构体布局与官方 vendor 模块一致（实测 402 模块全部加载、0 个 disagrees），因此以它为基线才能同时满足自定义功能和厂商驱动。"
+  },
+  "toolchain": {
+    "url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86",
+    "commit": "9916fb51ccb914d62d35ad9a7b9b21d2ef046928",
+    "directory": "clang-r563880c",
+    "tree": "571ed3e20b5708cea1177d5072853fc5b85b6877",
+    "archive_url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/9916fb51ccb914d62d35ad9a7b9b21d2ef046928/clang-r563880c.tar.gz",
+    "version": "clang 21.0.0 (r563880c)",
+    "note": "沿用已经实机验证过的 clang r563880c（此前 shark-wan 项目用同版本 + Full LTO + CFI 在 socrates 上构建并实机启动成功）。"
+  },
+  "bbg": {
+    "url": "https://github.com/vc-teahouse/Baseband-guard",
+    "commit": "48d9fdea643bcb41d204541400e9d8656b97a54f",
+    "patch": "patches/0010-baseband-guard-5.15.patch"
+  },
+  "droidspaces": {
+    "url": "https://github.com/ravindu644/Droidspaces-OSS",
+    "documentation_commit": "64d53d17e765dad3028171204220f4d1134c7e37",
+    "patch": "patches/0001-sysvipc-kabi-padding-6-7-8.patch",
+    "config": "config/droidspaces.config"
+  },
+  "anykernel3": {
+    "url": "https://github.com/osm0sis/AnyKernel3.git",
+    "commit": "c072981836cd3ee46ad52a5f2cba76ecb927cb1b"
+  }
+}
