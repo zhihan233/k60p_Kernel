@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [standard, gaming]
+        variant: [standard, gaming, stockref]
     steps:
       - uses: actions/checkout@v4
 

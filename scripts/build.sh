@@ -76,9 +76,18 @@ apply_cfg() {
   done < "$1"
 }
 
-apply_cfg config/features-common.config
-if [[ "${VARIANT}" == "gaming" ]]; then
-  apply_cfg config/features-gaming.config
+if [[ "${VARIANT}" == "stockref" ]]; then
+  # 纯原厂 config 参照组：不应用任何 feature fragment，用于判断 ACK 基线
+  # 的 genksyms CRC 是否与机器上的 vendor 模块一致（ABI 基准）。
+  echo "== stockref: using pristine stock config (no feature fragments)"
+  kernel/scripts/config --file out/.config --disable BBG
+  kernel/scripts/config --file out/.config --enable LTO_CLANG_THIN
+  kernel/scripts/config --file out/.config --disable LTO_CLANG_FULL
+else
+  apply_cfg config/features-common.config
+  if [[ "${VARIANT}" == "gaming" ]]; then
+    apply_cfg config/features-gaming.config
+  fi
 fi
 # 原厂配置 CONFIG_TRIM_UNUSED_KSYMS=y，但白名单指向小米构建机的绝对路径。
 # 这里改成指向 prepare.sh 生成的 KMI 白名单（ACK android/abi_gki_aarch64* 全量符号），
@@ -126,27 +135,30 @@ for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG',
 for name in ('CONFIG_CFS_BANDWIDTH', 'CONFIG_CGROUP_PIDS'):
     assert actual.get(name) == baseline.get(name), (name, actual.get(name), baseline.get(name))
 # Droidspaces 必需项
-for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPFS',
-             'CONFIG_USER_NS', 'CONFIG_POSIX_MQUEUE', 'CONFIG_NETFILTER_XT_MATCH_ADDRTYPE',
-             'CONFIG_MACVLAN', 'CONFIG_IP6_NF_NAT', 'CONFIG_IP6_NF_TARGET_MASQUERADE'):
-    assert actual.get(name) == 'y', (name, actual.get(name))
+if variant != 'stockref':
+    for name in ('CONFIG_PID_NS', 'CONFIG_IPC_NS', 'CONFIG_SYSVIPC', 'CONFIG_DEVTMPFS',
+                 'CONFIG_USER_NS', 'CONFIG_POSIX_MQUEUE', 'CONFIG_NETFILTER_XT_MATCH_ADDRTYPE',
+                 'CONFIG_MACVLAN', 'CONFIG_IP6_NF_NAT', 'CONFIG_IP6_NF_TARGET_MASQUERADE'):
+        assert actual.get(name) == 'y', (name, actual.get(name))
 # CI 稳定性：ThinLTO（Full LTO 在共享 runner 上会 OOM）
 assert actual.get('CONFIG_LTO_CLANG_THIN') == 'y', actual.get('CONFIG_LTO_CLANG_THIN')
 assert actual.get('CONFIG_LTO_CLANG_FULL') != 'y', actual.get('CONFIG_LTO_CLANG_FULL')
 
 # BBG
-assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
-assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
+if variant != 'stockref':
+    assert actual.get('CONFIG_BBG') == 'y', actual.get('CONFIG_BBG')
+    assert 'baseband_guard' in actual.get('CONFIG_LSM', ''), actual.get('CONFIG_LSM')
 # 构建修正：保持原厂 TRIM=y，白名单指向生成的 KMI 符号表
 assert actual.get('CONFIG_TRIM_UNUSED_KSYMS') == 'y', actual.get('CONFIG_TRIM_UNUSED_KSYMS')
 assert 'kmi_whitelist.txt' in actual.get('CONFIG_UNUSED_KSYMS_WHITELIST', ''), actual.get('CONFIG_UNUSED_KSYMS_WHITELIST')
 # 游戏优化
-assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
-assert actual.get('CONFIG_DEFAULT_FQ_CODEL') == 'y'
-assert actual.get('CONFIG_TCP_CONG_BBR') == 'y'
-if variant == 'gaming':
-    assert actual.get('CONFIG_TCP_CONG_BBR3') == 'y', actual.get('CONFIG_TCP_CONG_BBR3')
-    assert actual.get('CONFIG_DEFAULT_TCP_CONG') == '"bbr3"', actual.get('CONFIG_DEFAULT_TCP_CONG')
+if variant != 'stockref':
+    assert actual.get('CONFIG_LRU_GEN_ENABLED') == 'y'
+    assert actual.get('CONFIG_DEFAULT_FQ_CODEL') == 'y'
+    assert actual.get('CONFIG_TCP_CONG_BBR') == 'y'
+    if variant == 'gaming':
+        assert actual.get('CONFIG_TCP_CONG_BBR3') == 'y', actual.get('CONFIG_TCP_CONG_BBR3')
+        assert actual.get('CONFIG_DEFAULT_TCP_CONG') == '"bbr3"', actual.get('CONFIG_DEFAULT_TCP_CONG')
 print("== config self-check passed")
 PY
 
@@ -211,11 +223,12 @@ info = {
     'kernel_release': release,
     'ci_run_id': os.environ.get('GITHUB_RUN_ID'),
     'ci_commit': os.environ.get('GITHUB_SHA'),
-    'features': {
+    'features': ({'reference': 'pure stock config (no feature fragments) + ThinLTO'}
+                 if variant == 'stockref' else {
         'droidspaces': 'SYSVIPC/POSIX_MQUEUE/IPC_NS/PID_NS/USER_NS/DEVTMPFS/NAT/MACVLAN + kABI padding',
-        'bbg': 'Baseband-guard 防格机 LSM (boot/recovery 保护关闭)',
+        'bbg': 'Baseband-guard LSM',
         'gaming': 'BBRv3 + fq_codel + MGLRU default + sched/io tweaks + CRC/vermagic alarm' if variant == 'gaming' else 'BBR/fq_codel + MGLRU default + CRC/vermagic alarm',
-    },
+    }),
     'vendor_module_crc_check': 'PASS' if crc_rc == 0 else 'FAIL',
     'hashes': sha,
     'validation': 'Built Image + vendored module imported-symbol CRC comparison; device boot not tested in CI',
