@@ -15,11 +15,10 @@
   },
   "toolchain": {
     "url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86",
-    "commit": "9916fb51ccb914d62d35ad9a7b9b21d2ef046928",
-    "directory": "clang-r563880c",
-    "tree": "571ed3e20b5708cea1177d5072853fc5b85b6877",
-    "archive_url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/9916fb51ccb914d62d35ad9a7b9b21d2ef046928/clang-r563880c.tar.gz",
-    "version": "clang 21.0.0 (r563880c)"
+    "fetch": "git-sparse",
+    "directory": "clang-r450784e",
+    "version": "clang 14.0.7 (r450784e)",
+    "note": "与设备原厂内核 (CONFIG_CC_VERSION_TEXT = Android clang 14.0.7 r450784e) 以及 vendor 模块完全一致的编译器。CFI 类型哈希、genksyms CRC、LTO 行为都与原厂对齐。获取方式：blobless clone prebuilts/clang 后按 path 找最后一个包含 clang-r450784e 的 commit，再 sparse checkout（目录已从 HEAD 移除）。"
   },
   "droidspaces": {
     "url": "https://github.com/ravindu644/Droidspaces-OSS",

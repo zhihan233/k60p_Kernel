@@ -42,8 +42,8 @@ jobs:
         continue-on-error: true
         uses: actions/cache/restore@v4
         with:
-          path: toolchain/clang-r563880c
-          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+          path: toolchain/clang-r450784e
+          key: aosp-clang-r450784e-stock
 
       - name: Fetch sources, compiler, patches
         id: prepare
@@ -59,8 +59,8 @@ jobs:
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
-          path: toolchain/clang-r563880c
-          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+          path: toolchain/clang-r450784e
+          key: aosp-clang-r450784e-stock
 
       - name: Allocate link memory (Full LTO)
         id: swap

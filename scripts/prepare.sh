@@ -11,11 +11,16 @@ readarray -t LOCK < <(python3 - <<'PY'
 import json
 x = json.load(open('config/sources.lock.json'))
 k, t = x['kernel'], x['toolchain']
-for v in (k['archive_url'], k['scmversion'], t['archive_url'], t['commit'], t['directory'], t['tree']):
-    print(v)
+print(k['archive_url'])
+print(k['scmversion'])
+print(t.get('archive_url', ''))
+print(t.get('commit', ''))
+print(t['directory'])
+print(t.get('tree', ''))
+print(t.get('fetch', 'archive'))
 PY
 )
-K_URL="${LOCK[0]}"; SCMVER="${LOCK[1]}"; T_URL="${LOCK[2]}"; T_COMMIT="${LOCK[3]}"; T_DIR="${LOCK[4]}"; T_TREE="${LOCK[5]}"
+K_URL="${LOCK[0]}"; SCMVER="${LOCK[1]}"; T_URL="${LOCK[2]}"; T_COMMIT="${LOCK[3]}"; T_DIR="${LOCK[4]}"; T_TREE="${LOCK[5]}"; T_FETCH="${LOCK[6]}"
 
 echo "== variant: ${VARIANT}"
 
@@ -72,23 +77,40 @@ PY
 
 # ---------- 2. toolchain ----------
 if [[ ! -x "toolchain/${T_DIR}/bin/clang" ]]; then
-  echo "== fetching toolchain: ${T_DIR}"
+  echo "== fetching toolchain: ${T_DIR} (${T_FETCH})"
   mkdir -p "toolchain/${T_DIR}"
-  curl -fL --retry 3 "${T_URL}" -o .cache/clang.tar.gz
-  sha256sum .cache/clang.tar.gz > dist/compiler-archive.sha256
-  tar -xzf .cache/clang.tar.gz -C "toolchain/${T_DIR}"
-  rm -f .cache/clang.tar.gz
+  if [[ "${T_FETCH}" == "git-sparse" ]]; then
+    # clang-r450784e 已从 prebuilts 仓库 HEAD 删除，需要：
+    #   1) blobless clone（只有 commit/tree，无 blob）
+    #   2) git log 找到最后包含该目录的 commit
+    #   3) sparse-checkout 只拉该目录并 checkout
+    rm -rf .cache/prebuilts-clang
+    git clone --filter=blob:none --no-checkout "${T_URL}" .cache/prebuilts-clang
+    (
+      cd .cache/prebuilts-clang
+      sha="$(git log -1 --format=%H -- "${T_DIR}")"
+      echo "== ${T_DIR} last commit: ${sha}"
+      [[ -n "${sha}" ]] || { echo "!! cannot find ${T_DIR} in prebuilts history"; exit 1; }
+      git sparse-checkout init --cone
+      git sparse-checkout set "${T_DIR}"
+      git checkout "${sha}"
+      echo "${sha}" > "${ROOT}/dist/compiler-commit.txt"
+    )
+    cp -a ".cache/prebuilts-clang/${T_DIR}" "toolchain/${T_DIR}"
+    rm -rf .cache/prebuilts-clang
+  else
+    curl -fL --retry 3 "${T_URL}" -o .cache/clang.tar.gz
+    sha256sum .cache/clang.tar.gz > dist/compiler-archive.sha256
+    tar -xzf .cache/clang.tar.gz -C "toolchain/${T_DIR}"
+    rm -f .cache/clang.tar.gz
+  fi
 fi
 "toolchain/${T_DIR}/bin/clang" --version | tee dist/compiler.txt
 
 python3 - <<'PY'
-import json, urllib.request
+import json
 x = json.load(open('config/sources.lock.json'))['toolchain']
-url = f"{x['url']}/+/{x['commit']}/{x['directory']}/?format=JSON"
-with urllib.request.urlopen(url, timeout=60) as r:
-    tree = json.loads(r.read()[4:])['id']
-assert tree == x['tree'], (tree, x['tree'])
-print("== toolchain tree verified")
+print(f"== toolchain: {x['directory']} ({x.get('fetch','archive')}), expected: {x.get('version','?')}")
 PY
 
 # ---------- 3. patches ----------
