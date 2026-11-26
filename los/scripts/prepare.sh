@@ -75,8 +75,8 @@ apply_patch() {
   name="$(basename "$p")"
   (
     cd kernel
-    if patch --batch --fuzz="$fuzz" --dry-run < "../$p" >/dev/null 2>&1; then
-      patch --batch --fuzz="$fuzz" < "../$p"
+    if patch --batch --fuzz="$fuzz" --strip=1 --dry-run < "../$p" >/dev/null 2>&1; then
+      patch --batch --fuzz="$fuzz" --strip=1 < "../$p"
     else
       exit 3
     fi

@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: los/toolchain/clang-r563880c
-          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+          key: aosp-clang-r563880c-los-571ed3e20b5708cea1177d5072853fc5b85b6877
 
       - name: Fetch sources, compiler, patches
         id: prepare
@@ -46,7 +46,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: los/toolchain/clang-r563880c
-          key: aosp-clang-r563880c-571ed3e20b5708cea1177d5072853fc5b85b6877
+          key: aosp-clang-r563880c-los-571ed3e20b5708cea1177d5072853fc5b85b6877
 
       - name: Allocate link memory (Full LTO)
         run: |
