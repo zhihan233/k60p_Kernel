@@ -90,8 +90,15 @@ if [[ ! -x "toolchain/${T_DIR}/bin/clang" ]]; then
     (
       cd .cache/prebuilts-clang
       sha="$(git log -1 --format=%H -- "${T_DIR}")"
-      echo "== ${T_DIR} last commit: ${sha}"
+      echo "== ${T_DIR} last commit touching path: ${sha}"
       [[ -n "${sha}" ]] || { echo "!! cannot find ${T_DIR} in prebuilts history"; exit 1; }
+      # 最后一个改动该路径的 commit 可能是「删除 clang-r450784e」的提交，
+      # 需要沿 parent 回溯到仍包含该目录的 commit。
+      while [[ -n "${sha}" ]] && ! git cat-file -e "${sha}:${T_DIR}" 2>/dev/null; do
+        sha="$(git rev-parse "${sha}^" 2>/dev/null || true)"
+      done
+      [[ -n "${sha}" ]] || { echo "!! cannot locate a commit containing ${T_DIR}"; exit 1; }
+      echo "== using commit containing ${T_DIR}: ${sha}"
       git sparse-checkout init --cone
       git sparse-checkout set "${T_DIR}"
       git checkout "${sha}"
