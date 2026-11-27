@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v1.1（正式交接版；2026-11-27 许可证调整） |
-| 生成日期 | 2026-11-26（v1.0）/ 2026-11-27（v1.1 更新：自写代码改为 MIT） |
+| 文档版本 | v1.2（正式交接版；2026-11-27 许可证改 MIT、Release 重建 run 6） |
+| 生成日期 | 2026-11-26（v1.0）/ 2026-11-27（v1.1 MIT 许可、v1.2 重建与哈希更新） |
 | 项目状态 | ✅ 已交付：构建成功、真机验证通过、**已永久刷入设备** |
 | 交付方 | deepseek v4.1flash |
 | 接收方 | 后续维护者 / 接手 agent |
@@ -22,8 +22,10 @@
 - **交付物**：Release `k60p-kernel-los-v1`（`boot-los.img` / `ak3-los.zip` / `Image-los` / ABI 报告 / 构建元数据 / 内核配置）；
   本地 `deliver/`（gitignore）另存原厂 boot 备份 `stock-boot_a.img`，用于回滚。
 - **实机状态**：2026-11-26 19:10–19:15 在 `fastboot boot` 临时启动下完成全部验收（用户确认扬声器/麦克风/摄像头正常，
-  agent 完成终端内测试）；**2026-11-26 20:52 复核 `boot_a` 前 43,315,200 字节 sha256 与 `boot-los.img` 完全一致，
+  agent 完成终端内测试）；**2026-11-26 20:52 复核 `boot_a` 前 43,315,200 字节 sha256 = run 4 构建的 `bf6db3cc…`，
   确认设备已永久刷入本内核**，当前运行 `uname -r = 5.15.211-g093e3da978e7`。
+- **Release 与设备镜像**：Release 资产已于 **2026-11-27 因许可证改 MIT 重建（run 6）**，与设备运行的 run 4 镜像
+  **源码/ABI 相同、二进制哈希不同**（构建非字节可复现，见 §2.1 / §8）。
 - **唯一必须知道的差异**：版本串与官方不同是**预期行为**（模块带 `__versions`，vermagic 比对忽略 release 段）；
   `boot.img` 不带原厂 AVB 签名，需保持 Bootloader 解锁；系统 OTA 前应先刷回原厂 boot。
 - **日常维护**：修改 `los/**` 并 push 即触发 GitHub Actions 构建（约 20 分钟），成功后自动发布 Release。
@@ -54,21 +56,27 @@
 
 Release：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-los-v1
 
+> 当前资产来自 **run 6**（2026-11-27 许可证调整后重建，commit `12c2b6c`）。
+> ⚠️ **构建非字节可复现**：同一源码多次 CI 构建的 Image/boot 哈希不同（实测 run 4 / 5 / 6 各不相同），
+> 请以 Release 内 `SHA256SUMS-los` 为准；ABI 一致性以 `abi-report-los.json` 为准，不要跨构建比对哈希。
+
 | 文件 | 大小 | SHA-256 | 说明 |
 |---|---|---|---|
-| `boot-los.img` | 43,315,200 B | `bf6db3cc104de7293ca0fa846998ddcd9e8f2fd07ff7e75d7dce679348df953f` | fastboot 用 boot 镜像（header v4，kernel 偏移 4096，无 ramdisk） |
-| `ak3-los.zip` | 22,597,425 B | `b1819b07cf26c4ba26db5f607620f5e12f4504a57201e1c40180d104d6129eb6` | AnyKernel3 刷机包（`BLOCK=boot`，A/B） |
-| `Image-los` | 43,309,568 B | `865c980041cad469656f7f7b7d8ed83b6025ae1ea6a2895619d2dca20e06c4a7` | 裸 arm64 Image |
+| `boot-los.img` | 43,315,200 B | `5c42d8a830d312a6c2bee093ca836c57fd36a27f5efd646bbd7cfd768d9868be` | fastboot 用 boot 镜像（header v4，kernel 偏移 4096，无 ramdisk） |
+| `ak3-los.zip` | 22,598,024 B | `00030917613289503b0c4f6c08fb5fd4c6768ded00fd2f24df8459f33fa64745` | AnyKernel3 刷机包（`BLOCK=boot`，A/B；内含 AK3 `LICENSE` + 本仓库 `LICENSE.k60p-kernel.txt`） |
+| `Image-los` | 43,309,568 B | `84d680966ecf4e1e5cfdf699820d5fe52481b35606e5f839a7e58eab37485221` | 裸 arm64 Image |
 | `SHA256SUMS-los` | 233 B | — | 上述三个文件的校验值 |
 | `abi-report-los.json` | 18,858 B | — | 厂商模块 ABI 对比报告（`crc_mismatches=0`） |
 | `build-los.json` | 2,731 B | — | 构建元数据（内核/工具链/版本/ABI/哈希） |
 | `kernel-los.config` | 223,041 B | — | 最终内核配置 |
 
+> Release 说明正文只在**首次创建时**生成（run 4），后续重建不会更新正文；许可信息以包内 LICENSE 文件为准。
+
 ### 2.2 本地 `deliver/`（gitignore，不在仓库内）
 
 | 文件 | 大小 | 说明 |
 |---|---|---|
-| `boot-los.img` / `ak3-los.zip` / `Image-los` / `SHA256SUMS-los` / `abi-report-los.json` / `build-los.json` / `kernel-los.config` | 同 Release | 本地产物缓存 |
+| `boot-los.img` / `ak3-los.zip` / `Image-los` / `SHA256SUMS-los` / `abi-report-los.json` / `build-los.json` / `kernel-los.config` | run 4 构建 | 本地产物缓存（**run 4 产物 = 设备当前已刷入的版本**：boot `bf6db3cc…`、Image `865c9800…`、ak3 `b1819b07…`；Release 已重建为 run 6，见 §2.1） |
 | `stock-boot_a.img` | 201,326,592 B（192 MiB 分区镜像） | **原厂 boot_a 完整备份**，sha256 `5364ec155d88cbd86a43d04aa9d147251ba4a204a9c78de7f83a48ed94b5250e`；版本串 `5.15.194-android13-8-00019-gf4321180a397-ab15212794`；回滚用 |
 
 ### 2.3 仓库内容
@@ -209,6 +217,8 @@ LineageOS `android_kernel_xiaomi_sm8550` 与官方内核同属高通 msm-kernel 
 | 本地 push 失败 | DNS/代理不稳定 | 直连 SSH：`git -c core.sshCommand="ssh -o ProxyCommand=none -p 443" push origin main` |
 | 临时调试 workflow | 曾用 `.debug/` + `debug-run.yml` 抓日志 | 已全部删除，不再可用；需要日志看 Actions job 页面 |
 | Release 资产 | 同名 tag 重跑需覆盖 | workflow 用 `gh release upload --clobber` |
+| 修改 `los/**` 触发重建 | 仅改注释/加 SPDX 头也会触发 CI（如 commit `6188e65`），Release 资产被覆盖且二进制哈希变化 | 改 `los/**` 前确认是否要重建；纯文档改动放到 README/HANDOFF/tools 等不触发路径 |
+| Release 说明正文 | 首次创建后不再更新（重建只换资产） | 许可/变更说明放仓库文档与包内 LICENSE；有 token 时可 `gh release edit` |
 
 ---
 
@@ -371,8 +381,15 @@ adb pull /data/local/tmp/kern-test work/device-test
 - **18:30** 下载并校验产物（sha256 全部匹配；ABI `crc_mismatches=0`）
 - **19:09** 用户告知已在 `fastboot boot` 临时启动下完成人参与的测试（扬声器/麦克风/摄像头）并通过；
   agent 随后跑完终端测试（下节）
-- **20:52** 复核 `boot_a` 前 43,315,200 字节 sha256 与 `boot-los.img` 一致 → **确认已永久刷入**
+- **20:08** 因 SPDX 许可提交 `6188e65` 修改了 `los/scripts/`，**意外触发 run 5** `45816824406`
+  （17m22s 成功），Release 资产被重建覆盖（哈希变化，当时未同步文档）
+- **20:52** 复核 `boot_a` 前 43,315,200 字节 sha256 = run 4 的 `bf6db3cc…` → **确认已永久刷入**
+  ——设备当前运行的是 **run 4 构建的镜像**
+- **2026-11-27 08:37–08:56** 许可证改为 MIT 的提交 `12c2b6c` 触发 **run 6** `45917853438`
+  （17m33s 成功，build 14m），Release 重建；ABI 仍 0 mismatch；`ak3-los.zip` 内含
+  AK3 `LICENSE` 与本仓库 MIT `LICENSE.k60p-kernel.txt`
 - 设备当前运行：`Linux version 5.15.211-g093e3da978e7 (socrates@github-actions) ... clang version 21.0.0`
+  （run 4 镜像；Release 现为 run 6 构建，源码与 ABI 相同、二进制哈希不同）
 
 ### 7.2 逐项结果（原始数据摘录）
 
@@ -404,8 +421,9 @@ unclassified_missing_imports:   []（0 个）
 scope: "Imported symbol CRCs; external exports classified using device kallsyms."
 ```
 
-`build-los.json` 摘要：`kernel_release=5.15.211-g093e3da978e7`、`ci_run_id=45797343370`、
-`ci_commit=8a94029b7f6f30458e8c932e619a01563499de43`、`abi.unique_crc_mismatch=0`、`abi.missing_symbols=0`。
+`build-los.json` 摘要（run 6 `45917853438`）：`kernel_release=5.15.211-g093e3da978e7`、
+`ci_commit=12c2b6c48bfd…`、`abi.unique_crc_mismatch=0`、`abi.missing_symbols=0`
+（run 4 `45797343370` / commit `8a94029` 的 ABI 数值完全一致）。
 
 ---
 
@@ -422,7 +440,10 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 7. **未做长时间稳定性/待机测试**：未验证深层 suspend 长时间待机、长时间游戏/快充热稳定性。
 8. **ABI 检查非致命**：构建不会因 ABI 不一致而红，必须人工看 `build-los.json`（见 §4.4）。
 9. **证据文件是静态快照**：`los/evidence/vendor-module-versions.json` 不会自动更新，升级 ROM 后必须重建。
-10. **Release 说明为构建时自动生成**：本地无 token 无法修改已发布 Release 的说明正文。
+10. **构建非字节可复现**：同一份源码不同次 CI 构建的 Image / boot 哈希不同（run 4 / 5 / 6 实测各不相同，
+    见 §2.1）；不影响 ABI 与功能，但**不要跨构建比对哈希**，以 Release 内 `SHA256SUMS-los` 为准。
+11. **Release 说明正文不随重建更新**：正文为首次创建时生成（run 4），后续重建只覆盖资产；
+    许可文本以 `ak3-los.zip` 内 `LICENSE` / `LICENSE.k60p-kernel.txt` 为准。
 
 ---
 
@@ -444,10 +465,10 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 ## 10. 交接检查清单（接收方逐项确认）
 
 - [ ] 能访问 GitHub 仓库 https://github.com/zhihan233/k60p_Kernel（main 分支）
-- [ ] 本地工作区 `D:\Administrator\Documents\ai\k60p_build` 存在，`deliver/` 中文件 sha256 与本文档一致
+- [ ] 本地工作区 `D:\Administrator\Documents\ai\k60p_build` 存在，`deliver/` 中是 run 4 产物（设备当前镜像，sha256 见 §2.2）
 - [ ] 阅读 `README.md`（用户向说明）与本文档
 - [ ] 确认设备当前状态：已永久刷入（`adb shell uname -r` = `5.15.211-g093e3da978e7`；
-      `boot_a` 前 43,315,200 字节 sha256 与 `boot-los.img` 一致）
+      `boot_a` 前 43,315,200 字节 sha256 = `bf6db3cc…`，即 run 4 boot 镜像；Release 现为 run 6 重建版）
 - [ ] 保留 `deliver/stock-boot_a.img`（原厂 boot 备份，回滚用）
 - [ ] 能触发并监控一次构建（§6.1 / §6.2）
 - [ ] 能用 `tools/device_test.sh` 复跑设备验收（§6.5）
@@ -468,9 +489,12 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 | 2026-11-26 19:10–19:15 | 用户临时启动实测（人参与项通过）+ agent 终端验收全通过 |
 | 2026-11-26 19:25 | 清理旧 ACK 流水线、调试设施、旧分支/tag；仓库只保留 LOS 流水线 |
 | 2026-11-26 19:35–20:30 | README 重构与全面审校；新增 GPL-2.0 LICENSE 与 SPDX 标识 |
-| 2026-11-26 20:52 | 复核确认 `boot_a` 已写入本内核（永久刷入生效） |
+| 2026-11-26 20:52 | 复核确认 `boot_a` 已写入 run 4 构建的内核（永久刷入生效，boot sha256 `bf6db3cc…`） |
 | 2026-11-26 20:55 | 生成本正式交接文档（v1.0） |
-| 2026-11-27 08:40 | 许可证调整：自写代码 GPL-2.0-only → **MIT**（LICENSE/SPDX/README/HANDOFF）；`package.sh` 在 ak3 zip 内附带 MIT 许可文本，触发 CI 重建 Release（v1.1） |
+| 2026-11-26 20:08→20:25 | SPDX 许可提交 `6188e65` 意外触发 **run 5** `45816824406`（17m22s 成功），Release 资产被重建覆盖（哈希变化） |
+| 2026-11-27 08:40 | 许可证调整：自写代码 GPL-2.0-only → **MIT**（LICENSE/SPDX/README/HANDOFF）；`package.sh` 在 ak3 zip 内附带 MIT 许可文本 |
+| 2026-11-27 08:37→08:56 | 触发 **run 6** `45917853438`（17m33s 成功，build 14m）：ABI 仍 0 mismatch；`ak3-los.zip` 含 AK3 `LICENSE` + `LICENSE.k60p-kernel.txt` |
+| 2026-11-27 09:00 | 更新 README / 交接文档中的 Release 哈希与"非字节可复现"说明（v1.2） |
 
 ---
 

@@ -76,14 +76,18 @@
 | `abi-report-los.json` / `build-los.json` | ABI 报告 / 构建元数据 |
 | `kernel-los.config` | 最终内核配置（可自行核对所有 CONFIG） |
 
-本次构建校验值：
+当前 Release 校验值（run 6 / 2026-11-27 重建）：
 
 ```text
-boot-los.img  bf6db3cc104de7293ca0fa846998ddcd9e8f2fd07ff7e75d7dce679348df953f  43,315,200 B
-ak3-los.zip   b1819b07cf26c4ba26db5f607620f5e12f4504a57201e1c40180d104d6129eb6  22,597,425 B
+boot-los.img  5c42d8a830d312a6c2bee093ca836c57fd36a27f5efd646bbd7cfd768d9868be  43,315,200 B
+ak3-los.zip   00030917613289503b0c4f6c08fb5fd4c6768ded00fd2f24df8459f33fa64745  22,598,024 B
 ```
 
 校验方式：把 `SHA256SUMS-los` 与要刷的文件放在同一目录，执行 `sha256sum -c SHA256SUMS-los`。
+
+> 注意：CI 重建即使源码不变也可能产生**不同的二进制哈希**（ThinLTO 构建非字节可复现，实测多次构建哈希不同）；
+> 请始终以 Release 内 `SHA256SUMS-los` 为准，功能 / ABI 一致性以 `abi-report-los.json` 为准。
+> Release 说明正文为首次创建时生成，许可信息以包内 `LICENSE` / `LICENSE.k60p-kernel.txt` 为准。
 
 ### 刷入步骤（A/B 设备，只刷当前槽的 boot 分区）
 
@@ -186,7 +190,7 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - **2026-11-26 — `k60p-kernel-los-v1`**：首个 LOS 基线版本（5.15.211 + Droidspaces + BBG + 游戏优化，ThinLTO 构建）；
   实机验证：扬声器 / 麦克风 / 摄像头 / WiFi / 蜂窝 / 充电 / 120Hz / KernelSU LKM / BBG / Droidspaces 全部通过，内核模块 0 加载失败。
 - **2026-11-27**：许可证调整——本仓库自写脚本 / 配置由 GPL-2.0-only 改为 **MIT**，补充 AnyKernel3（BSD-3-Clause 脚本 + GPL 二进制）许可说明；
-  打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布。
+  打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布（run 6，17m33s，ABI 仍 0 mismatch）。
 
 ---
 

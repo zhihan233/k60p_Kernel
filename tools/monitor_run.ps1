@@ -5,6 +5,7 @@ param(
   [int]$IntervalSec = 60,
   [int]$TimeoutMin = 55,
   [string]$Out = 'work/monitor.log',
+  [string]$ProxyUrl = 'http://127.0.0.1:7897',
   [switch]$Once
 )
 $ErrorActionPreference = 'Continue'
@@ -16,13 +17,27 @@ $tmp = Join-Path $repoRoot "work/job_$JobId.html"
 $pattern = 'data-name="([^"]+)"\s+data-number="(\d+)"\s+data-conclusion="([^"]*)"\s+data-external-id="[^"]*"\s+data-expand="[^"]*"\s+data-started-at="([^"]*)"\s+data-completed-at="([^"]*)"'
 $deadline = (Get-Date).AddMinutes($TimeoutMin)
 $last = @{}
+
+function Fetch-JobPage {
+  # 先走代理，再尝试直连
+  foreach ($mode in @('proxy', 'direct')) {
+    if ($mode -eq 'proxy' -and -not $ProxyUrl) { continue }
+    if ($mode -eq 'proxy') {
+      & curl.exe -s -L --max-time 45 -x $ProxyUrl -o $tmp $url 2>$null
+    } else {
+      & curl.exe -s -L --max-time 45 -o $tmp $url 2>$null
+    }
+    if ((Test-Path $tmp) -and (Get-Item $tmp).Length -gt 5000) { return $true }
+  }
+  return $false
+}
+
 if (-not $Once) {
   Add-Content $Out ("{0} monitor start run={1} job={2}" -f (Get-Date -Format 'HH:mm:ss'), $RunId, $JobId)
 }
 while ((Get-Date) -lt $deadline) {
-  & curl.exe -s -L --max-time 45 -o $tmp $url 2>$null
   $raw = ''
-  if (Test-Path $tmp) { $raw = Get-Content $tmp -Raw -Encoding UTF8 }
+  if (Fetch-JobPage) { $raw = Get-Content $tmp -Raw -Encoding UTF8 }
   if (-not $raw -or $raw -notmatch 'check-step') {
     Add-Content $Out ("{0} fetch failed (len={1})" -f (Get-Date -Format 'HH:mm:ss'), $raw.Length)
     if ($Once) { break }
