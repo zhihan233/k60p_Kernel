@@ -1,14 +1,10 @@
 name: build-los
 
 # LineageOS 基线内核构建：Droidspaces + BBG + 游戏优化
-# 触发：默认仅手动 workflow_dispatch（2026-11-27 起关闭 push 自动构建，避免误触发重建/覆盖 Release）
-# 注意：下面的 push 触发是【临时一次性】的，用于恢复 KASAN 保留版本（ABI 必需）的重建，完成后会移除。
+# 触发：仅手动 workflow_dispatch（2026-11-27 起关闭 push 自动构建，避免误触发重建/覆盖 Release）
+# 重建：Actions 页面 → build-los → Run workflow（约 15-20 分钟）
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - '.github/workflows/build-los.yml'
 
 permissions:
   contents: write

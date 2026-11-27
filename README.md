@@ -76,11 +76,11 @@
 | `abi-report-los.json` / `build-los.json` | ABI 报告 / 构建元数据 |
 | `kernel-los.config` | 最终内核配置（可自行核对所有 CONFIG） |
 
-当前 Release 校验值（run 6 / 2026-11-27 重建）：
+当前 Release 校验值（run 8 / 2026-11-27 恢复 ABI 后重建）：
 
 ```text
-boot-los.img  5c42d8a830d312a6c2bee093ca836c57fd36a27f5efd646bbd7cfd768d9868be  43,315,200 B
-ak3-los.zip   00030917613289503b0c4f6c08fb5fd4c6768ded00fd2f24df8459f33fa64745  22,598,024 B
+boot-los.img  27d086ae7b37419fa51569fa6a3a38aaaf9797d8b9ac60d80b45c09e45041d22  43,315,200 B
+ak3-los.zip   512485c58150a0c3e90080889f6f753f691e79725ed46bcaebcae1a5112a9344  22,598,131 B
 ```
 
 校验方式：把 `SHA256SUMS-los` 与要刷的文件放在同一目录，执行 `sha256sum -c SHA256SUMS-los`。
@@ -136,6 +136,7 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - **boot.img 不带原厂 AVB 签名**（vbmeta 及其余分区未改动）：需要保持 **Bootloader 解锁**；一旦回锁，boot 校验失败将无法启动本内核。
 - **只替换 boot 分区的内核**：`vendor_dlkm`、`vendor_boot`、`init_boot`、`dtbo` 等均不触碰；系统 OTA 前建议先刷回原厂 boot，否则可能因 boot 校验失败导致 OTA 失败。
 - **ThinLTO 与 Full LTO 生成代码等价**，不影响 genksyms CRC、CFI 类型哈希与 vermagic；切成 ThinLTO 只是为了在 GitHub Actions runner 的内存限制下稳定完成构建。
+- **KASAN 保持编译开启（ABI 必需）**：原厂 vendor 模块按 KASAN-on 内核编译（`struct kmem_cache` / `struct page` 布局与 KASAN 配置相关），编译期关闭 KASAN 会造成 **435 条符号 CRC 不匹配**、原厂模块无法加载。原厂 vendor_boot cmdline 自带 `kasan=off`，**运行时 KASAN 检查本就是关闭的**，日常使用无额外开销。
 - **刷入后第一次开机**可能比平时略慢（系统服务首次初始化），属正常现象。
 
 ---
@@ -192,6 +193,10 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - **2026-11-27**：许可证调整——本仓库自写脚本 / 配置由 GPL-2.0-only 改为 **MIT**，补充 AnyKernel3（BSD-3-Clause 脚本 + GPL 二进制）许可说明；
   打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布（run 6，约 18 分钟，ABI 仍 0 mismatch）；
   同时**关闭 push 自动构建**（CI 改为手动 `workflow_dispatch`，避免误触发重建/覆盖 Release）。
+- **2026-11-27（下午）**：尝试按需求关闭 `KASAN_HW_TAGS` 重建（run 7）→ ABI 报告出现 **435 条 CRC 不一致**
+  （`kmalloc_caches` / `kmem_cache_alloc_trace` / `__alloc_pages` / `kasan_flag_enabled` 等，`struct kmem_cache`/`struct page`
+  布局与 KASAN 配置相关）→ 判定编译期不可关闭，已回退并重建恢复 ABI（run 8）。KASAN 运行时由原厂 `kasan=off` 关闭，
+  编译期保留仅为 ABI 兼容（详见「注意事项 / 已知差异」）。
 
 ---
 
