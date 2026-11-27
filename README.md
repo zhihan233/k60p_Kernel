@@ -1,6 +1,6 @@
 # Redmi K60 Pro (socrates) 5.15 定制内核 — LineageOS 基线
 
-> ✅ 已在真机 `fastboot boot` 验证通过（2026-11-26）｜构建方式：GitHub Actions 云端编译
+> ✅ 已在真机 `fastboot boot` 验证通过（2026-11-26）｜构建方式：GitHub Actions 云端编译（**手动触发**）
 
 > [!WARNING]
 > **⚠️ 刷机有风险，操作需谨慎！**
@@ -22,7 +22,7 @@
 | 内核基线 | [LineageOS `android_kernel_xiaomi_sm8550`](https://github.com/LineageOS/android_kernel_xiaomi_sm8550)，`lineage-23.2` @ `093e3da978e7`（Linux **5.15.211**） |
 | 版本串 | `5.15.211-g093e3da978e7` |
 | 编译 | AOSP Clang r563880c（21.0.0），**ThinLTO** + CFI + MODVERSIONS + KASAN_HW_TAGS |
-| 构建方式 | GitHub Actions（push 修改 `los/**` 自动触发，约 20 分钟） |
+| 构建方式 | GitHub Actions（**手动触发**：Actions 页面 → Run workflow；约 18–20 分钟；push 不会自动构建） |
 
 **为什么用 LineageOS 内核**：官方 HyperOS 内核是小米用自家 5.15.78 vendor 树编译并伪装成 GKI 版本串的，公开源码（MiCode `socrates-t-oss`）只有 5.15.41，无法复现其 ABI；而 LineageOS sm8550 内核与官方同属高通 msm-kernel vendor 树血统，kABI / 结构体布局一致。实测 **400 个原厂 vendor 模块全部加载（另有 KernelSU 的 `kernelsu`，合计 401 个模块），符号 CRC 0 差异**——这正是不换内核源码时厂商驱动（扬声器、摄像头等）能正常工作的关键。
 
@@ -176,7 +176,7 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 
 ## 自行构建
 
-- CI 工作流：`.github/workflows/build-los.yml`（push 修改 `los/**` 自动触发；ThinLTO，约 20 分钟）
+- CI 工作流：`.github/workflows/build-los.yml`（**手动触发**：Actions 页面 → Run workflow；ThinLTO，约 18–20 分钟；**push 不会自动构建**）
 - 构建脚本：`los/scripts/{prepare-runner,prepare,build,package}.sh`
 - 版本锁定：`los/config/sources.lock.json`；设备基线配置：`los/config/device-baseline.config`
 - 本地辅助工具：`tools/`（流水线监控、产物校验、设备验收脚本）
@@ -190,7 +190,8 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 - **2026-11-26 — `k60p-kernel-los-v1`**：首个 LOS 基线版本（5.15.211 + Droidspaces + BBG + 游戏优化，ThinLTO 构建）；
   实机验证：扬声器 / 麦克风 / 摄像头 / WiFi / 蜂窝 / 充电 / 120Hz / KernelSU LKM / BBG / Droidspaces 全部通过，内核模块 0 加载失败。
 - **2026-11-27**：许可证调整——本仓库自写脚本 / 配置由 GPL-2.0-only 改为 **MIT**，补充 AnyKernel3（BSD-3-Clause 脚本 + GPL 二进制）许可说明；
-  打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布（run 6，17m33s，ABI 仍 0 mismatch）。
+  打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布（run 6，约 18 分钟，ABI 仍 0 mismatch）；
+  同时**关闭 push 自动构建**（CI 改为手动 `workflow_dispatch`，避免误触发重建/覆盖 Release）。
 
 ---
 

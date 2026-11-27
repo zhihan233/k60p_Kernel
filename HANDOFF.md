@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v1.2（正式交接版；2026-11-27 许可证改 MIT、Release 重建 run 6） |
-| 生成日期 | 2026-11-26（v1.0）/ 2026-11-27（v1.1 MIT 许可、v1.2 重建与哈希更新） |
+| 文档版本 | v1.3（正式交接版；2026-11-27 许可证改 MIT、重建 run 6、关闭 push 自动构建） |
+| 生成日期 | 2026-11-26（v1.0）/ 2026-11-27（v1.1 MIT、v1.2 重建与哈希、v1.3 手动构建） |
 | 项目状态 | ✅ 已交付：构建成功、真机验证通过、**已永久刷入设备** |
 | 交付方 | deepseek v4.1flash |
 | 接收方 | 后续维护者 / 接手 agent |
@@ -28,7 +28,8 @@
   **源码/ABI 相同、二进制哈希不同**（构建非字节可复现，见 §2.1 / §8）。
 - **唯一必须知道的差异**：版本串与官方不同是**预期行为**（模块带 `__versions`，vermagic 比对忽略 release 段）；
   `boot.img` 不带原厂 AVB 签名，需保持 Bootloader 解锁；系统 OTA 前应先刷回原厂 boot。
-- **日常维护**：修改 `los/**` 并 push 即触发 GitHub Actions 构建（约 20 分钟），成功后自动发布 Release。
+- **日常维护**：重建需**手动触发** GitHub Actions（Actions → build-los → Run workflow，约 18–20 分钟），成功后自动发布 Release；
+  push 不会自动构建（2026-11-27 起，避免误触发重建/覆盖 Release）。
 
 ---
 
@@ -217,7 +218,7 @@ LineageOS `android_kernel_xiaomi_sm8550` 与官方内核同属高通 msm-kernel 
 | 本地 push 失败 | DNS/代理不稳定 | 直连 SSH：`git -c core.sshCommand="ssh -o ProxyCommand=none -p 443" push origin main` |
 | 临时调试 workflow | 曾用 `.debug/` + `debug-run.yml` 抓日志 | 已全部删除，不再可用；需要日志看 Actions job 页面 |
 | Release 资产 | 同名 tag 重跑需覆盖 | workflow 用 `gh release upload --clobber` |
-| 修改 `los/**` 触发重建 | 仅改注释/加 SPDX 头也会触发 CI（如 commit `6188e65`），Release 资产被覆盖且二进制哈希变化 | 改 `los/**` 前确认是否要重建；纯文档改动放到 README/HANDOFF/tools 等不触发路径 |
+| 修改 `los/**` 曾触发重建 | 2026-11-26 仅改注释/加 SPDX 头（提交 `6188e65`）也会自动重建，Release 资产被覆盖且二进制哈希变化 | **2026-11-27 起已关闭 push 自动构建**：workflow 只保留 `workflow_dispatch`，重建必须手动 Run workflow |
 | Release 说明正文 | 首次创建后不再更新（重建只换资产） | 许可/变更说明放仓库文档与包内 LICENSE；有 token 时可 `gh release edit` |
 
 ---
@@ -226,7 +227,8 @@ LineageOS `android_kernel_xiaomi_sm8550` 与官方内核同属高通 msm-kernel 
 
 ### 5.1 CI 工作流 `.github/workflows/build-los.yml`
 
-- **触发**：push 修改 `los/**` 或该 workflow 文件；支持 `workflow_dispatch`
+- **触发**：**仅手动** `workflow_dispatch`（Actions 页面 → Run workflow）；
+  2026-11-27 起已移除 push 自动触发（原规则为 push 修改 `los/**` 或该 workflow 文件）
 - **并发**：`group: build-los`，`cancel-in-progress: true`（新 run 会取消旧 run）
 - **权限**：`contents: write`（用于创建 Release / 上传资产）
 - **超时**：150 分钟；runner：`ubuntu-24.04`
@@ -282,13 +284,13 @@ LineageOS `android_kernel_xiaomi_sm8550` 与官方内核同属高通 msm-kernel 
 > 设备连接：`R:\platform-tools\adb.exe` / `fastboot.exe`（Windows）。adb offline 时：
 > `adb kill-server && adb start-server && adb reconnect offline`。
 
-### 6.1 重新构建
-```bash
-# 修改 los/** 后 push 即自动触发
-git push origin main
-# 或手动触发（需在 GitHub Actions 页面点 Run workflow）
-```
-预计 20 分钟；成功会自动发布到 Release `k60p-kernel-los-v1`（同名资产覆盖）。
+### 6.1 重新构建（**手动触发**，push 不会自动构建）
+1. 打开 Actions：https://github.com/zhihan233/k60p_Kernel/actions/workflows/build-los.yml
+2. 右上角 **Run workflow** → 选 `main` 分支 → Run
+3. 预计 18–20 分钟；成功后自动发布到 Release `k60p-kernel-los-v1`（同名资产覆盖，二进制哈希会变化）
+
+> 2026-11-27 起已移除 push 自动触发：改 `los/**`（包括只加注释）**不会**再自动构建；
+> 纯文档/工具改动（README、HANDOFF、tools/）也完全不会触发。
 
 ### 6.2 监控构建（无需 GitHub API token）
 ```powershell
@@ -386,7 +388,7 @@ adb pull /data/local/tmp/kern-test work/device-test
 - **20:52** 复核 `boot_a` 前 43,315,200 字节 sha256 = run 4 的 `bf6db3cc…` → **确认已永久刷入**
   ——设备当前运行的是 **run 4 构建的镜像**
 - **2026-11-27 08:37–08:56** 许可证改为 MIT 的提交 `12c2b6c` 触发 **run 6** `45917853438`
-  （17m33s 成功，build 14m），Release 重建；ABI 仍 0 mismatch；`ak3-los.zip` 内含
+  （约 18 分钟成功，build 14m），Release 重建；ABI 仍 0 mismatch；`ak3-los.zip` 内含
   AK3 `LICENSE` 与本仓库 MIT `LICENSE.k60p-kernel.txt`
 - 设备当前运行：`Linux version 5.15.211-g093e3da978e7 (socrates@github-actions) ... clang version 21.0.0`
   （run 4 镜像；Release 现为 run 6 构建，源码与 ABI 相同、二进制哈希不同）
@@ -493,16 +495,17 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 | 2026-11-26 20:55 | 生成本正式交接文档（v1.0） |
 | 2026-11-26 20:08→20:25 | SPDX 许可提交 `6188e65` 意外触发 **run 5** `45816824406`（17m22s 成功），Release 资产被重建覆盖（哈希变化） |
 | 2026-11-27 08:40 | 许可证调整：自写代码 GPL-2.0-only → **MIT**（LICENSE/SPDX/README/HANDOFF）；`package.sh` 在 ak3 zip 内附带 MIT 许可文本 |
-| 2026-11-27 08:37→08:56 | 触发 **run 6** `45917853438`（17m33s 成功，build 14m）：ABI 仍 0 mismatch；`ak3-los.zip` 含 AK3 `LICENSE` + `LICENSE.k60p-kernel.txt` |
+| 2026-11-27 08:37→08:56 | 触发 **run 6** `45917853438`（约 18 分钟，build 14m）：ABI 仍 0 mismatch；`ak3-los.zip` 含 AK3 `LICENSE` + `LICENSE.k60p-kernel.txt` |
 | 2026-11-27 09:00 | 更新 README / 交接文档中的 Release 哈希与"非字节可复现"说明（v1.2） |
+| 2026-11-27 09:20 | **关闭 push 自动构建**：`build-los` 仅保留 `workflow_dispatch`，重建改为手动；文档同步更新（v1.3） |
 
 ---
 
 ## 附录 A：常用命令速查
 
 ```bash
-# 构建
-git push origin main                                     # 改 los/** 自动触发 CI
+# 构建（手动）
+#   Actions 页面 → build-los → Run workflow
 # 设备
 adb devices && adb shell su -c 'uname -r'
 adb reboot bootloader && fastboot devices

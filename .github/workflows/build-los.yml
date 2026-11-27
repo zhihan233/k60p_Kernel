@@ -1,14 +1,9 @@
 name: build-los
 
 # LineageOS 基线内核构建：Droidspaces + BBG + 游戏优化
-# 触发：push 修改 los/** 或本 workflow
+# 触发：仅手动 workflow_dispatch（2026-11-27 起关闭 push 自动构建，避免误触发重建/覆盖 Release）
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'los/**'
-      - '.github/workflows/build-los.yml'
 
 permissions:
   contents: write
