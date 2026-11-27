@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: MIT
 """本地校验 LOS 内核产物：boot.img header v4 / kernel_size / 版本串。"""
 from __future__ import annotations
 

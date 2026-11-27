@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: MIT
 # 打包：boot.img（header v4）+ AnyKernel3 zip + SHA256SUMS + 发布说明
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -31,6 +31,7 @@ git -C .cache/anykernel3 fetch -q --depth=1 origin "${AK3_COMMIT}"
 git -C .cache/anykernel3 checkout -q --detach FETCH_HEAD
 cp "dist/Image-${VARIANT}" .cache/anykernel3/Image
 cp config/anykernel.sh .cache/anykernel3/anykernel.sh
+cp "$ROOT/../LICENSE" .cache/anykernel3/LICENSE.k60p-kernel.txt
 cp "dist/build-${VARIANT}.json" "dist/abi-report-${VARIANT}.json" .cache/anykernel3/ 2>/dev/null || true
 (
   cd .cache/anykernel3
@@ -45,6 +46,7 @@ echo "== writing RELEASE note"
   echo "- 内核基线: LineageOS sm8550 (${RELEASE_STR})，与厂商 vendor 模块同源血统"
   echo "- 功能: Droidspaces（SYSVIPC kABI padding） + BBG 防格机 + 游戏/性能优化（MGLRU/fq_codel/BBR）"
   echo "- boot.img: Android boot header v4，kernel 偏移 4096，无 ramdisk/signature"
+  echo "- 许可: 本仓库脚本/配置为 MIT（随包 LICENSE.k60p-kernel.txt）；AnyKernel3 模板脚本 BSD-3-Clause、随包二进制 GPLv2/GPLv3+ 等（见包内 LICENSE）"
   echo
   echo "## 刷入"
   echo '```bash'
@@ -56,10 +58,10 @@ echo "== writing RELEASE note"
   echo
   echo "## 自检"
   echo '```bash'
-  echo "uname -r; lsmod | wc -l"
+  echo "uname -r; lsmod | tail -n +2 | wc -l"
+  echo "mkdir -p /sys/kernel/security && mount -t securityfs none /sys/kernel/security; cat /sys/kernel/security/lsm"
   echo "dmesg | grep -iE 'disagrees about version|Unknown symbol|CFI failure' | head"
-  echo "cat /sys/kernel/security/lsm | tr ',' '\\n' | grep baseband"
-  echo "cat /proc/sys/net/ipv4/tcp_congestion_control; cat /sys/kernel/mm/lru_gen/enabled"
+  echo "cat /proc/sys/net/ipv4/tcp_available_congestion_control; cat /sys/kernel/mm/lru_gen/enabled"
   echo '```'
   echo
   echo "构建时间: $(date -u '+%Y-%m-%d %H:%M:%SZ')"

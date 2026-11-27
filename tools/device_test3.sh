@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # 设备内核验收脚本 3（root）：屏幕状态 / governor / GPU / qdisc
 OUT=/data/local/tmp/kern-test3
 rm -rf "$OUT"; mkdir -p "$OUT"

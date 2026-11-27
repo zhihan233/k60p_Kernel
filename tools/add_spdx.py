@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: MIT
 """给仓库脚本补 SPDX 许可标识（幂等）。"""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SPDX = "SPDX-License-Identifier: GPL-2.0-only"
+SPDX = "SPDX-License-Identifier: MIT"
 
 targets = []
 targets += sorted((ROOT / 'los' / 'scripts').glob('*.sh'))
 targets += sorted((ROOT / 'los' / 'scripts').glob('*.py'))
 targets += sorted((ROOT / 'tools').glob('*.py'))
 targets += sorted((ROOT / 'tools').glob('*.ps1'))
+targets += sorted((ROOT / 'tools').glob('*.sh'))
 
 changed = 0
 for path in targets:
@@ -22,7 +23,8 @@ for path in targets:
     if lines and lines[0].startswith('#!'):
         insert_at = 1
     lines.insert(insert_at, f'# {SPDX}\n')
-    path.write_text(''.join(lines), encoding='utf-8')
+    # 用 bytes 写入，避免 Windows 文本模式把 \n 转成 \r\n
+    path.write_bytes(''.join(lines).encode('utf-8'))
     changed += 1
     print('added SPDX:', path.relative_to(ROOT))
 print(f'{changed} files updated')

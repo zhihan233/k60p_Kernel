@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # 设备内核验收脚本（root 下运行），输出到 /data/local/tmp/kern-test/
 OUT=/data/local/tmp/kern-test
 rm -rf "$OUT"; mkdir -p "$OUT"

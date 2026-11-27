@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # 设备内核验收脚本 6：BBG 白名单分区放行 + 蜂窝/异常统计
 OUT=/data/local/tmp/kern-test6
 rm -rf "$OUT"; mkdir -p "$OUT"

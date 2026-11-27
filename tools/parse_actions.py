@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: MIT
 import json, re, sys
 from pathlib import Path
 p = Path(sys.argv[1] if len(sys.argv) > 1 else r"D:\Administrator\Documents\ai\k60p_build\work\actions.html")

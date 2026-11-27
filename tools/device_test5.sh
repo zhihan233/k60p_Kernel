@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # BBG 防格机功能验证（root）：受保护分区 setattr 应被拒绝；boot 属白名单应允许（测试后恢复）
 OUT=/data/local/tmp/kern-test5
 rm -rf "$OUT"; mkdir -p "$OUT"

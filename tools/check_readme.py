@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: MIT
 """仓库文档自检：README 表格列数、代码块内文件引用、常见过期表述。
 
 用法：python tools/check_readme.py [README.md]

@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # 设备内核验收脚本 2（root）：BBG 运行时、Droidspaces、网络、电源、异常检查
 OUT=/data/local/tmp/kern-test2
 rm -rf "$OUT"; mkdir -p "$OUT"

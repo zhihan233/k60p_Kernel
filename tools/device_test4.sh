@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
 # 设备内核验收脚本 4（root）：Droidspaces 实际运行 / 蓝牙 / 显示 / 命名空间
 OUT=/data/local/tmp/kern-test4
 rm -rf "$OUT"; mkdir -p "$OUT"

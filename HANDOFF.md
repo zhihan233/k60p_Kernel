@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v1.0（正式交接版） |
-| 生成日期 | 2026-11-26 |
+| 文档版本 | v1.1（正式交接版；2026-11-27 许可证调整） |
+| 生成日期 | 2026-11-26（v1.0）/ 2026-11-27（v1.1 更新：自写代码改为 MIT） |
 | 项目状态 | ✅ 已交付：构建成功、真机验证通过、**已永久刷入设备** |
 | 交付方 | deepseek v4.1flash |
 | 接收方 | 后续维护者 / 接手 agent |
@@ -85,7 +85,7 @@ los/                     LineageOS 基线流水线（唯一构建流水线）
 tools/                   本地辅助工具（构建监控 / 产物校验 / 设备验收）
 README.md                项目说明（用户向）
 HANDOFF.md               本文档（维护向）
-LICENSE                  GPL-2.0-only 全文
+LICENSE                  MIT 许可全文（脚本/配置带 SPDX 标识；第三方源码与补丁按其原始许可）
 ```
 
 ---
@@ -258,6 +258,12 @@ LineageOS `android_kernel_xiaomi_sm8550` 与官方内核同属高通 msm-kernel 
 | `0022-lib-int-sqrt.patch` | 更快整数平方根 | FlyFrog |
 | `0023-alarmtimer-minimise-wakeup-time.patch` | alarmtimer 唤醒最小化 | xNombre |
 | `0024-dcache-reduce-cache-pressure.patch` | dentry/inode 缓存减压 | Tyler Nijmeh |
+
+> **AnyKernel3 许可**：AK3 模板脚本采用 **BSD-3-Clause 风格的自定义许可**（Copyright © 2019 Chris Renshaw / osm0sis，
+> 要求保留版权声明与免责声明、不得用作者名义背书），并非 GPL；其随包二进制许可各异
+> （`magiskboot`/`magiskpolicy` GPL-3.0+、`busybox` GPL-2.0、lptools/fec/snapshotupdater Apache-2.0、httools MIT 等，
+> 详见 AK3 仓库 `LICENSE` 文件及其中的源码链接）。本仓库 `ak3-los.zip` 打包时保留 AK3 `LICENSE`，
+> 并额外放入本仓库 MIT 许可 `LICENSE.k60p-kernel.txt`（见 `los/scripts/package.sh`）。
 
 ---
 
@@ -464,6 +470,7 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 | 2026-11-26 19:35–20:30 | README 重构与全面审校；新增 GPL-2.0 LICENSE 与 SPDX 标识 |
 | 2026-11-26 20:52 | 复核确认 `boot_a` 已写入本内核（永久刷入生效） |
 | 2026-11-26 20:55 | 生成本正式交接文档（v1.0） |
+| 2026-11-27 08:40 | 许可证调整：自写代码 GPL-2.0-only → **MIT**（LICENSE/SPDX/README/HANDOFF）；`package.sh` 在 ak3 zip 内附带 MIT 许可文本，触发 CI 重建 Release（v1.1） |
 
 ---
 
@@ -504,9 +511,11 @@ git -c core.sshCommand="ssh -o ProxyCommand=none -p 443" push origin main
 
 ## 附录 C：许可与第三方来源
 
-- 本仓库脚本/配置：GPL-2.0-only（见 `LICENSE`，脚本带 SPDX 标识）；
-- 内核源码：LineageOS（GPL-2.0），补丁归各自上游作者（详见 `los/patches/` 文件头与 README「模块来源」）；
-- 第三方组件：Droidspaces（SYSVIPC padding）、vc-teahouse/Baseband-guard、osm0sis/AnyKernel3。
+- 本仓库自写脚本 / 配置：**MIT**（见 `LICENSE`；脚本文件头带 `SPDX-License-Identifier: MIT`）；
+- 内核源码：LineageOS（GPL-2.0），`los/patches/` 中的补丁归各自上游作者（详见各补丁头与 README「模块来源」）；
+- 第三方组件：Droidspaces（SYSVIPC padding）、vc-teahouse/Baseband-guard、osm0sis/AnyKernel3；
+  AnyKernel3 脚本为 BSD-3-Clause 风格许可、随包二进制为 GPL-2.0 / GPL-3.0+ / Apache-2.0 / MIT 等（见 AK3 `LICENSE`）；
+- 发布物 `ak3-los.zip` 同时包含 AK3 `LICENSE` 与本仓库 `LICENSE.k60p-kernel.txt`。
 
 ---
 

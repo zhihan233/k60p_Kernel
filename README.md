@@ -163,8 +163,9 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 
 **许可**
 
-- 本仓库自行编写的构建脚本、内核配置与 `tools/` 辅助脚本以 **GPL-2.0-only** 发布（脚本文件头带 SPDX 标识；与内核源码及补丁许可保持一致，避免同仓库混合许可带来的合规歧义），完整许可文本见 [`LICENSE`](LICENSE)；
-- 内核源码与 `los/patches/` 中的补丁为**第三方上游作品**（作者 / 来源见各补丁头），版权归各自作者，按其原始许可证（GPL-2.0 等）分发；
+- 本仓库自行编写的构建脚本、内核配置与 `tools/` 辅助脚本以 **MIT** 发布（脚本文件头带 `SPDX-License-Identifier: MIT`），完整许可文本见 [`LICENSE`](LICENSE)；
+- 内核源码（LineageOS，GPL-2.0）与 `los/patches/` 中的补丁为**第三方上游作品**（作者 / 来源见各补丁头），版权归各自作者，按其原始许可证分发；
+- `ak3-los.zip` 由 AnyKernel3 模板打包：AnyKernel3 脚本为 **BSD-3-Clause 风格的自定义许可**（Copyright © 2019 Chris Renshaw / osm0sis），随包二进制 `magiskboot` / `magiskpolicy` 为 GPL-3.0+、`busybox` 为 GPL-2.0 等（详见包内 `LICENSE` 及其中的源码链接）；本仓库 `anykernel.sh` 的 MIT 许可以 `LICENSE.k60p-kernel.txt` 随包附带；
 - 本仓库仅做源码下载、打补丁与构建编排，不修改第三方源码分发的许可证。
 
 ---
@@ -184,6 +185,8 @@ dmesg | grep -iE 'disagrees about version|CFI failure|Unknown symbol'   # 应为
 
 - **2026-11-26 — `k60p-kernel-los-v1`**：首个 LOS 基线版本（5.15.211 + Droidspaces + BBG + 游戏优化，ThinLTO 构建）；
   实机验证：扬声器 / 麦克风 / 摄像头 / WiFi / 蜂窝 / 充电 / 120Hz / KernelSU LKM / BBG / Droidspaces 全部通过，内核模块 0 加载失败。
+- **2026-11-27**：许可证调整——本仓库自写脚本 / 配置由 GPL-2.0-only 改为 **MIT**，补充 AnyKernel3（BSD-3-Clause 脚本 + GPL 二进制）许可说明；
+  打包时在 `ak3-los.zip` 内附带 MIT 许可文本并重建发布。
 
 ---
 
