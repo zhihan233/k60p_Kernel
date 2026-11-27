@@ -47,6 +47,15 @@ for cfg in kernel/arch/arm64/configs/gki_defconfig out/.config; do
   kernel/scripts/config --file "$cfg" --disable LTO_CLANG_FULL
 done
 
+# KASAN：调试特性（基线为 KASAN_HW_TAGS）。本内核面向日常/游戏使用，关闭 KASAN 去掉内存检查开销
+# （原厂 vendor_boot 命令行本身也带 kasan=off）。注意必须关闭整个 CONFIG_KASAN：
+# 只关 KASAN_HW_TAGS 会让 Kconfig 回退到 KASAN_GENERIC（更慢）。KASAN 不影响 ABI/CRC/CFI/vermagic。
+echo "== disabling KASAN (debug feature off for production)"
+for cfg in kernel/arch/arm64/configs/gki_defconfig out/.config; do
+  kernel/scripts/config --file "$cfg" --disable KASAN
+  kernel/scripts/config --file "$cfg" --disable KASAN_HW_TAGS
+done
+
 enable_cfg() { # $1=name, applies to both gki_defconfig and out/.config
   local name="$1"
   kernel/scripts/config --file kernel/arch/arm64/configs/gki_defconfig --enable "$name"
@@ -109,12 +118,15 @@ actual = read('out/.config')
 baseline = read('config/device-baseline.config')
 
 for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG', 'CONFIG_LTO', 'CONFIG_LTO_CLANG',
-             'CONFIG_KASAN_HW_TAGS', 'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
+             'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
              'CONFIG_MODULE_SIG_PROTECT', 'CONFIG_TARGET_PRODUCT_SOCRATES'):
     assert actual.get(name) == baseline.get(name) == 'y', (name, actual.get(name), baseline.get(name))
 # LTO 模式：CI 上用 ThinLTO（Full LTO 在 runner 上 OOM），ABI 等价
 assert actual.get('CONFIG_LTO_CLANG_THIN') == 'y', actual.get('CONFIG_LTO_CLANG_THIN')
 assert actual.get('CONFIG_LTO_CLANG_FULL') != 'y', actual.get('CONFIG_LTO_CLANG_FULL')
+# KASAN 已按生产构建关闭（调试特性；原厂 vendor_boot 也传 kasan=off）
+for name in ('CONFIG_KASAN', 'CONFIG_KASAN_HW_TAGS', 'CONFIG_KASAN_GENERIC', 'CONFIG_KASAN_SW_TAGS'):
+    assert actual.get(name) != 'y', (name, actual.get(name))
 for name in ('CONFIG_CFS_BANDWIDTH', 'CONFIG_CGROUP_PIDS'):
     assert actual.get(name) == baseline.get(name), (name, actual.get(name), baseline.get(name))
 
@@ -195,6 +207,7 @@ info = {
         'bbg': 'Baseband-guard LSM（boot/recovery 不拦截）',
         'game': 'MGLRU 默认开启 + fq_codel 默认队列 + BBR/ECN + 调度/内存小补丁',
         'lto': 'ThinLTO（CI 稳定性；与 Full LTO 生成代码等价，不影响 ABI/CRC/vermagic）',
+        'kasan': 'KASAN 关闭（KASAN_HW_TAGS 属调试特性，生产构建去掉内存检查开销）',
     },
     'abi': {
         'modules': a['modules'], 'matched_symbols': a['matched_symbols'],
