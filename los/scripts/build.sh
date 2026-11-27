@@ -47,14 +47,12 @@ for cfg in kernel/arch/arm64/configs/gki_defconfig out/.config; do
   kernel/scripts/config --file "$cfg" --disable LTO_CLANG_FULL
 done
 
-# KASAN：调试特性（基线为 KASAN_HW_TAGS）。本内核面向日常/游戏使用，关闭 KASAN 去掉内存检查开销
-# （原厂 vendor_boot 命令行本身也带 kasan=off）。注意必须关闭整个 CONFIG_KASAN：
-# 只关 KASAN_HW_TAGS 会让 Kconfig 回退到 KASAN_GENERIC（更慢）。KASAN 不影响 ABI/CRC/CFI/vermagic。
-echo "== disabling KASAN (debug feature off for production)"
-for cfg in kernel/arch/arm64/configs/gki_defconfig out/.config; do
-  kernel/scripts/config --file "$cfg" --disable KASAN
-  kernel/scripts/config --file "$cfg" --disable KASAN_HW_TAGS
-done
+# 【不要关闭 KASAN】原厂 vendor 模块是按 KASAN-on 内核编译的：CONFIG_KASAN 会改变
+# struct kmem_cache / struct page 等布局，编译期关掉 KASAN 会导致 435 条导入符号 CRC
+# 不匹配（kmalloc_caches / kmem_cache_alloc_trace / __alloc_pages / kasan_flag_enabled ...），
+# 原厂模块将无法加载（等于废掉 WiFi/相机/扬声器等驱动）。
+# 原厂 vendor_boot cmdline 本身带 `kasan=off`：KASAN 运行时检查本就是关闭的，
+# 编译期保留只为 ABI 兼容，不影响日常性能。此处显式断言强制保持开启（见下方 self-check）。
 
 enable_cfg() { # $1=name, applies to both gki_defconfig and out/.config
   local name="$1"
@@ -118,15 +116,16 @@ actual = read('out/.config')
 baseline = read('config/device-baseline.config')
 
 for name in ('CONFIG_MODVERSIONS', 'CONFIG_CFI_CLANG', 'CONFIG_LTO', 'CONFIG_LTO_CLANG',
-             'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
+             'CONFIG_KASAN_HW_TAGS', 'CONFIG_SHADOW_CALL_STACK', 'CONFIG_DEBUG_INFO_BTF',
              'CONFIG_MODULE_SIG_PROTECT', 'CONFIG_TARGET_PRODUCT_SOCRATES'):
     assert actual.get(name) == baseline.get(name) == 'y', (name, actual.get(name), baseline.get(name))
 # LTO 模式：CI 上用 ThinLTO（Full LTO 在 runner 上 OOM），ABI 等价
 assert actual.get('CONFIG_LTO_CLANG_THIN') == 'y', actual.get('CONFIG_LTO_CLANG_THIN')
 assert actual.get('CONFIG_LTO_CLANG_FULL') != 'y', actual.get('CONFIG_LTO_CLANG_FULL')
-# KASAN 已按生产构建关闭（调试特性；原厂 vendor_boot 也传 kasan=off）
-for name in ('CONFIG_KASAN', 'CONFIG_KASAN_HW_TAGS', 'CONFIG_KASAN_GENERIC', 'CONFIG_KASAN_SW_TAGS'):
-    assert actual.get(name) != 'y', (name, actual.get(name))
+# 显式断言 KASAN 保持开启：编译期关 KASAN 会改变 struct kmem_cache/page 布局，
+# 造成原厂模块 400+ 条符号 CRC 不匹配（详见上方说明）。
+assert actual.get('CONFIG_KASAN') == 'y', actual.get('CONFIG_KASAN')
+assert actual.get('CONFIG_KASAN_HW_TAGS') == 'y', actual.get('CONFIG_KASAN_HW_TAGS')
 for name in ('CONFIG_CFS_BANDWIDTH', 'CONFIG_CGROUP_PIDS'):
     assert actual.get(name) == baseline.get(name), (name, actual.get(name), baseline.get(name))
 
@@ -207,7 +206,7 @@ info = {
         'bbg': 'Baseband-guard LSM（boot/recovery 不拦截）',
         'game': 'MGLRU 默认开启 + fq_codel 默认队列 + BBR/ECN + 调度/内存小补丁',
         'lto': 'ThinLTO（CI 稳定性；与 Full LTO 生成代码等价，不影响 ABI/CRC/vermagic）',
-        'kasan': 'KASAN 关闭（KASAN_HW_TAGS 属调试特性，生产构建去掉内存检查开销）',
+        'kasan': 'KASAN_HW_TAGS 编译保留（ABI 必需：原厂模块按 KASAN-on 编译；运行时由 vendor_boot cmdline kasan=off 关闭检查）',
     },
     'abi': {
         'modules': a['modules'], 'matched_symbols': a['matched_symbols'],
