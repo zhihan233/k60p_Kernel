@@ -20,7 +20,8 @@
 - **ABI 核心结论**：与官方 vendor 模块 **0 个 CRC 差异**——401 个模块（400 个原厂 vendor 模块 + KernelSU 的 `kernelsu`）
   全部加载、0 加载失败。这是扬声器 / 摄像头等厂商驱动能正常工作的根本原因。
 - **交付物**：Release `k60p-kernel-los-v1`（`boot-los.img` / `ak3-los.zip` / `Image-los` / ABI 报告 / 构建元数据 / 内核配置）；
-  本地 `deliver/`（gitignore）另存原厂 boot 备份 `stock-boot_a.img`，用于回滚。
+  本地 `deliver/`（gitignore）保存设备当前已刷入的 run 4 镜像与发布校验文件；**原厂 boot 回滚改用官方 fastboot 包**
+  `R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0\images\boot.img`（已校验与原 boot_a 备份前 96MB 完全一致）。
 - **实机状态**：2026-11-26 19:10–19:15 在 `fastboot boot` 临时启动下完成全部验收（用户确认扬声器/麦克风/摄像头正常，
   agent 完成终端内测试）；**2026-11-26 20:52 复核 `boot_a` 前 43,315,200 字节 sha256 = run 4 构建的 `bf6db3cc…`，
   确认设备已永久刷入本内核**，当前运行 `uname -r = 5.15.211-g093e3da978e7`。
@@ -78,7 +79,11 @@ Release：https://github.com/zhihan233/k60p_Kernel/releases/tag/k60p-kernel-los-
 | 文件 | 大小 | 说明 |
 |---|---|---|
 | `boot-los.img` / `ak3-los.zip` / `Image-los` / `SHA256SUMS-los` / `abi-report-los.json` / `build-los.json` / `kernel-los.config` | run 4 构建 | 本地产物缓存（**run 4 产物 = 设备当前已刷入的版本**：boot `bf6db3cc…`、Image `865c9800…`、ak3 `b1819b07…`；Release 已重建为 run 8，见 §2.1） |
-| `stock-boot_a.img` | 201,326,592 B（192 MiB 分区镜像） | **原厂 boot_a 完整备份**，sha256 `5364ec155d88cbd86a43d04aa9d147251ba4a204a9c78de7f83a48ed94b5250e`；版本串 `5.15.194-android13-8-00019-gf4321180a397-ab15212794`；回滚用 |
+
+> **原厂 boot 回滚**：本地 192MB 分区备份 `stock-boot_a.img` 已于 2026-11-27 清理（R 盘有完整官方 fastboot 包）。
+> 官方包：`R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0`（misc.txt：`device=socrates`、`build_number=OS3.0.304.0.WMKCNXM`）；
+> 其中 `images/boot.img`（96MB，sha256 `a3741f3b37dbe439898f12405495d83606180e5d01aac867c5968804223ee445`）
+> 与已删除的 `stock-boot_a.img` 前 96MB **字节级一致**，可直接用于回滚。
 
 ### 2.3 仓库内容
 
@@ -341,10 +346,12 @@ fastboot boot boot-los.img        # 先临时验证
 fastboot flash boot boot-los.img  # 确认后永久刷入
 fastboot reboot
 
-# 回滚
-fastboot flash boot stock-boot_a.img   # deliver/ 中的原厂备份
+# 回滚（使用 R 盘官方 fastboot 包中的原厂 boot.img；已校验与原 boot_a 备份前 96MB 一致）
+fastboot flash boot "R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0\images\boot.img"
 ```
 > 也可以刷 `ak3-los.zip`（AnyKernel3，`BLOCK=boot`、支持 A/B）。
+> **完整恢复官方系统**：在 `R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0` 下运行
+> `flash_all_except_storage.bat`（保留数据）/ `flash_all.bat`（清空数据）。
 > **OTA 前**务必先回滚原厂 boot，否则 OTA 校验可能失败。
 
 ### 6.5 设备端验收
@@ -373,7 +380,7 @@ adb pull /data/local/tmp/kern-test work/device-test
 
 | 现象 | 可能原因 | 处理 |
 |---|---|---|
-| 开机卡 logo / 黑屏 | boot 镜像错误或与 ROM 不匹配 | 长按电源 10s 重启回原厂；`fastboot boot` 先验证；必要时 `fastboot flash boot stock-boot_a.img` |
+| 开机卡 logo / 黑屏 | boot 镜像错误或与 ROM 不匹配 | 长按电源 10s 重启回原厂；`fastboot boot` 先验证；必要时 `fastboot flash boot "R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0\images\boot.img"` |
 | 扬声器 / 摄像头异常 | vendor 模块与内核 ABI 不符（换了 ROM / 版本） | 核对 `dmesg` 的 `disagrees about version`；确认系统为 HyperOS 3.0.304.0.WMKCNXM；必要时按新 ROM 重建证据与内核 |
 | 模块加载失败 | 同上，或 `TRIM_UNUSED_KSYMS` 被误开 | 检查 `kernel-los.config`；重跑 ABI 报告 |
 | 构建 ABI 报告非 0 | 源码/配置/工具链被改动 | 比对 `los/config/sources.lock.json` 与 `los/patches/`；**不要用 CRC 忽略补丁掩盖** |
@@ -488,7 +495,7 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 - [ ] 阅读 `README.md`（用户向说明）与本文档
 - [ ] 确认设备当前状态：已永久刷入（`adb shell uname -r` = `5.15.211-g093e3da978e7`；
       `boot_a` 前 43,315,200 字节 sha256 = `bf6db3cc…`，即 run 4 boot 镜像；Release 现为 run 8 重建版）
-- [ ] 保留 `deliver/stock-boot_a.img`（原厂 boot 备份，回滚用）
+- [ ] 确认官方 fastboot 包在 `R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0`（回滚用；`images/boot.img` 已校验）
 - [ ] 能触发并监控一次构建（§6.1 / §6.2）
 - [ ] 能用 `tools/device_test.sh` 复跑设备验收（§6.5）
 - [ ] 了解本地无 GitHub token（Release 正文修改需网页/新 token）
@@ -517,6 +524,7 @@ scope: "Imported symbol CRCs; external exports classified using device kallsyms.
 | 2026-11-27 09:20 | **关闭 push 自动构建**：`build-los` 仅保留 `workflow_dispatch`，重建改为手动；文档同步更新（v1.3） |
 | 2026-11-27 12:03→12:20 | 按需求尝试关闭 `KASAN_HW_TAGS` 重建 **run 7**（`45937686508`，17m18s 成功），但 ABI 报告 **435 条 CRC 不一致**（`struct kmem_cache`/`struct page` 布局依赖 KASAN）→ 判定不可关闭 |
 | 2026-11-27 12:22→12:37 | 回退 KASAN 变更并重建 **run 8**（`45939601123`，14m19s 成功）：ABI 恢复 **0 mismatch**，Release 资产重建（boot `27d086ae…`）；构建脚本加入 `CONFIG_KASAN/_HW_TAGS == y` 强制断言（文档 v1.4） |
+| 2026-11-27 13:1x | 清理临时文件（`work/` 139.5MB、Windows 临时文件、设备 /data/local/tmp 脚本）；核对 R 盘官方包 `socrates_images_OS3.0.304.0.WMKCNXM_16.0`（device/build 号匹配，boot.img 96MB 与原 192MB 备份前 96MB 字节一致）→ 删除冗余 192MB 备份，回滚改用官方 `images/boot.img` |
 
 ---
 
@@ -530,7 +538,7 @@ adb devices && adb shell su -c 'uname -r'
 adb reboot bootloader && fastboot devices
 fastboot boot boot-los.img                               # 临时启动
 fastboot flash boot boot-los.img                         # 永久刷入
-fastboot flash boot stock-boot_a.img                     # 回滚原厂
+fastboot flash boot "R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0\images\boot.img"   # 回滚官方
 # 设备验收
 adb push tools/device_test.sh /data/local/tmp/ && adb shell "su -c 'sh /data/local/tmp/device_test.sh'"
 # 本地校验
@@ -553,7 +561,7 @@ git -c core.sshCommand="ssh -o ProxyCommand=none -p 443" push origin main
 | `tools/device_test*.sh` | 设备端验收脚本（root 执行） |
 | `tools/monitor_run.ps1` / `parse_actions.py` | 无 API 的构建监控 |
 | `tools/check_boot.py` / `fetch_release.ps1` | boot 镜像校验 / Release 下载 |
-| `deliver/stock-boot_a.img` | 原厂 boot 备份（回滚用，gitignore） |
+| `R:\socrates_images_OS3.0.304.0.WMKCNXM_16.0` | 官方 fastboot 完整刷机包（回滚 / 救砖；images/boot.img 已校验） |
 
 ## 附录 C：许可与第三方来源
 
